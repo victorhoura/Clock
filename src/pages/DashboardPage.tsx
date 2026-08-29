@@ -47,13 +47,17 @@ function StatCard({
 export function DashboardPage() {
   const { users, timeEntries, activities, theme } = useApp()
   const gridColor = theme === 'dark' ? '#334155' : '#e2e8f0'
+  const tooltipTextColor = theme === 'dark' ? '#e2e8f0' : '#1e293b'
   const tooltipStyle = {
     borderRadius: 12,
     border: `1px solid ${theme === 'dark' ? '#334155' : '#e2e8f0'}`,
     background: theme === 'dark' ? '#1e293b' : '#ffffff',
-    color: theme === 'dark' ? '#e2e8f0' : '#1e293b',
+    color: tooltipTextColor,
     fontSize: 12,
   }
+  // Recharts colors the value line with the series' own color by default
+  // (e.g. the bar's indigo), which reads poorly against a dark tooltip.
+  const tooltipItemStyle = { color: tooltipTextColor }
 
   const days14 = useMemo(() => lastNDays(14), [])
   const days7 = useMemo(() => lastNDays(7), [])
@@ -185,6 +189,7 @@ export function DashboardPage() {
                 <Tooltip
                   cursor={{ fill: 'rgba(99,102,241,0.08)' }}
                   contentStyle={tooltipStyle}
+                  itemStyle={tooltipItemStyle}
                   formatter={(value) => [`${value}h`, 'Horas']}
                 />
                 <Bar dataKey="hours" radius={[8, 8, 0, 0]}>
@@ -210,6 +215,7 @@ export function DashboardPage() {
                 <Tooltip
                   cursor={{ fill: 'rgba(16,185,129,0.08)' }}
                   contentStyle={tooltipStyle}
+                  itemStyle={tooltipItemStyle}
                   formatter={(value) => [value, 'Concluídas']}
                 />
                 <Bar dataKey="completed" radius={[8, 8, 0, 0]}>
@@ -242,6 +248,7 @@ export function DashboardPage() {
                 <YAxis tick={{ fill: AXIS_COLOR, fontSize: 12 }} axisLine={false} tickLine={false} />
                 <Tooltip
                   contentStyle={tooltipStyle}
+                  itemStyle={tooltipItemStyle}
                   formatter={(value) => [`${value}h`, 'Horas']}
                   labelFormatter={(d) => `Dia ${String(d).slice(8, 10)}/${String(d).slice(5, 7)}`}
                 />
@@ -271,7 +278,8 @@ export function DashboardPage() {
                   ))}
                 </Pie>
                 <Legend verticalAlign="bottom" height={24} wrapperStyle={{ fontSize: 12, color: AXIS_COLOR }} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle}
+                  itemStyle={tooltipItemStyle} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
