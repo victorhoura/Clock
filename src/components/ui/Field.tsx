@@ -25,6 +25,8 @@ export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className={inputClasses} rows={3} {...props} />
 }
 
+const selectClasses = `${inputClasses} [&>option]:bg-white [&>option]:text-slate-800 dark:[&>option]:bg-slate-800 dark:[&>option]:text-slate-100`
+
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={inputClasses} {...props} />
+  return <select className={selectClasses} {...props} />
 }
