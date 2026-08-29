@@ -14,6 +14,8 @@ const COLUMNS: { id: ActivityStatus; label: string; accent: string }[] = [
   { id: 'completed', label: 'Concluída', accent: 'border-t-emerald-400' },
 ]
 
+const STATUS_OPTIONS = COLUMNS.map((c) => ({ value: c.id, label: c.label }))
+
 export function ActivitiesPage() {
   const { users, activities, addActivity, updateActivityStatus, deleteActivity } = useApp()
   const [modalOpen, setModalOpen] = useState(false)
@@ -113,13 +115,10 @@ export function ActivitiesPage() {
                       )}
                       <Select
                         value={activity.status}
-                        onChange={(e) => updateActivityStatus(activity.id, e.target.value as ActivityStatus)}
-                        className="w-auto py-1 text-xs"
-                      >
-                        <option value="pending">Pendente</option>
-                        <option value="in_progress">Em andamento</option>
-                        <option value="completed">Concluída</option>
-                      </Select>
+                        onChange={(v) => updateActivityStatus(activity.id, v as ActivityStatus)}
+                        options={STATUS_OPTIONS}
+                        className="w-auto px-2.5 py-1 text-xs"
+                      />
                     </div>
                   </div>
                 )
@@ -137,13 +136,7 @@ export function ActivitiesPage() {
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalhes da atividade" />
         </Field>
         <Field label="Responsável">
-          <Select value={userId} onChange={(e) => setUserId(e.target.value)}>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </Select>
+          <Select value={userId} onChange={setUserId} options={users.map((u) => ({ value: u.id, label: u.name }))} />
         </Field>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setModalOpen(false)}>

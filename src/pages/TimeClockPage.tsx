@@ -44,13 +44,12 @@ export function TimeClockPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardContent className="flex flex-col items-center gap-5 py-8 text-center">
-            <Select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="max-w-xs">
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </Select>
+            <Select
+              value={selectedUserId}
+              onChange={setSelectedUserId}
+              options={users.map((u) => ({ value: u.id, label: u.name }))}
+              className="max-w-xs"
+            />
 
             {selectedUser && (
               <>
