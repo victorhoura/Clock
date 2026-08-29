@@ -10,7 +10,13 @@ Aplicativo web para controle de produtividade de equipes pequenas: dashboard ger
 - **Usuários**: cadastro, edição e remoção manual de membros da equipe.
 - **Tema claro/escuro** com alternância persistida.
 
-Os dados são armazenados localmente no navegador (`localStorage`) — não há backend nem autenticação externa.
+Os dados ficam em um banco Supabase (Postgres) compartilhado por toda a equipe, com sincronização em tempo real entre dispositivos. Não há autenticação de conta (Google ou outra) — o cadastro dos membros é manual e cada pessoa apenas seleciona o próprio nome ao usar o app.
+
+## Configuração do Supabase
+
+1. Copie `.env.example` para `.env`.
+2. Preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` com os valores do seu projeto Supabase (Project Settings → API).
+3. O schema (tabelas `team_members`, `time_entries`, `activities`) já está criado no projeto Supabase vinculado a este app.
 
 ## Rodando localmente
 
