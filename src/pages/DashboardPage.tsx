@@ -97,7 +97,7 @@ export function DashboardPage() {
             '0000-01-01',
             '9999-12-31',
           ),
-          completed: activities.filter((a) => a.userId === u.id && a.status === 'completed').length,
+          completed: activities.filter((a) => a.assigneeIds.includes(u.id) && a.status === 'completed').length,
         }))
         .sort((a, b) => b.hours - a.hours),
     [users, timeEntries, activities],

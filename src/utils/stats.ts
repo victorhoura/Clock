@@ -28,7 +28,7 @@ export function completedPerUser(activities: Activity[], users: TeamMember[]): {
   const map = new Map<string, number>()
   for (const a of activities) {
     if (a.status !== 'completed') continue
-    map.set(a.userId, (map.get(a.userId) ?? 0) + 1)
+    for (const userId of a.assigneeIds) map.set(userId, (map.get(userId) ?? 0) + 1)
   }
   return users.map((u) => ({ name: u.name.split(' ')[0], completed: map.get(u.id) ?? 0, color: u.color }))
 }

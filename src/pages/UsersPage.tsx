@@ -26,8 +26,10 @@ export function UsersPage() {
     }
     for (const a of activities) {
       if (a.status !== 'completed') continue
-      const s = map.get(a.userId)
-      if (s) s.completed += 1
+      for (const userId of a.assigneeIds) {
+        const s = map.get(userId)
+        if (s) s.completed += 1
+      }
     }
     return map
   }, [users, timeEntries, activities])

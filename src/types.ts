@@ -20,7 +20,7 @@ export type ActivityStatus = 'pending' | 'in_progress' | 'completed'
 
 export interface Activity {
   id: string
-  userId: string
+  assigneeIds: string[]
   title: string
   description: string
   status: ActivityStatus

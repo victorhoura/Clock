@@ -17,7 +17,7 @@ function fromEntryRow(row: TimeEntryRow): TimeEntry {
 function fromActivityRow(row: ActivityRow): Activity {
   return {
     id: row.id,
-    userId: row.user_id,
+    assigneeIds: row.assignee_ids ?? [],
     title: row.title,
     description: row.description,
     status: row.status,
@@ -53,7 +53,7 @@ interface AppContextValue {
   deleteTimeEntry: (id: string) => Promise<void>
 
   activities: Activity[]
-  addActivity: (userId: string, title: string, description: string) => Promise<void>
+  addActivity: (assigneeIds: string[], title: string, description: string) => Promise<void>
   updateActivityStatus: (id: string, status: ActivityStatus) => Promise<void>
   deleteActivity: (id: string) => Promise<void>
 }
@@ -171,9 +171,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await supabase.from('time_entries').delete().eq('id', id)
   }
 
-  const addActivity = async (userId: string, title: string, description: string) => {
+  const addActivity = async (assigneeIds: string[], title: string, description: string) => {
     await supabase.from('activities').insert({
-      user_id: userId,
+      assignee_ids: assigneeIds,
       title: title.trim(),
       description: description.trim(),
       status: 'pending',
