@@ -31,6 +31,10 @@ npm run dev
 npm run build
 ```
 
+## Deploy
+
+Implantado na Vercel (projeto `pulse-produtividade`), com deploy automático a cada push na branch de produção do repositório. As variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` são configuradas no Vercel Project Settings → Environment Variables.
+
 ## Stack
 
-React + TypeScript + Vite + Tailwind CSS v4 + Recharts.
+React + TypeScript + Vite + Tailwind CSS v4 + Recharts + Supabase (Postgres + Realtime), hospedado na Vercel.
