@@ -7,6 +7,7 @@ import { TeamCalendar } from '../components/TeamCalendar'
 import { Avatar } from '../components/ui/Avatar'
 import { dailyTeamHours, hoursInRange, hoursPerUser, lastNDays } from '../utils/stats'
 import { formatDate, formatHours } from '../utils/time'
+import type { Activity, TeamMember } from '../types'
 
 const AXIS_COLOR = '#94a3b8'
 const STATUS_COLORS: Record<string, string> = {
@@ -39,6 +40,53 @@ function StatCard({
           <p className="mt-0.5 text-xs leading-snug text-slate-500 dark:text-slate-400">{label}</p>
           <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{sub}</p>
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ActivityListCard({
+  title,
+  activities,
+  userMap,
+  emptyMessage,
+}: {
+  title: string
+  activities: Activity[]
+  userMap: Map<string, TeamMember>
+  emptyMessage: string
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+          {activities.length}
+        </span>
+      </CardHeader>
+      <CardContent className="flex h-72 flex-col gap-2 overflow-y-auto pt-4">
+        {activities.length === 0 && <p className="py-8 text-center text-xs text-slate-400">{emptyMessage}</p>}
+        {activities.map((activity) => {
+          const assignees = activity.assigneeIds.map((id) => userMap.get(id)).filter((u): u is TeamMember => !!u)
+          return (
+            <div
+              key={activity.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5 dark:border-slate-800"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{activity.title}</p>
+                <p className="text-[11px] text-slate-400">Criada em {formatDate(activity.createdAt.slice(0, 10))}</p>
+              </div>
+              <div className="flex shrink-0 -space-x-1.5">
+                {assignees.map((u) => (
+                  <div key={u.id} title={u.name} className="ring-2 ring-white dark:ring-slate-900">
+                    <Avatar user={u} size={24} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </CardContent>
     </Card>
   )
@@ -83,6 +131,13 @@ export function DashboardPage() {
     () =>
       activities
         .filter((a) => a.status === 'pending')
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+    [activities],
+  )
+  const inProgressActivities = useMemo(
+    () =>
+      activities
+        .filter((a) => a.status === 'in_progress')
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
     [activities],
   )
@@ -152,16 +207,16 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle>Calendário da equipe</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <TeamCalendar entries={timeEntries} users={users} />
-          </CardContent>
-        </Card>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Calendário da equipe</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <TeamCalendar entries={timeEntries} users={users} />
+        </CardContent>
+      </Card>
 
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Ranking de produtividade</CardTitle>
@@ -180,9 +235,7 @@ export function DashboardPage() {
             ))}
           </CardContent>
         </Card>
-      </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Horas trabalhadas por pessoa</CardTitle>
@@ -208,41 +261,21 @@ export function DashboardPage() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Atividades pendentes</CardTitle>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-              {pendingActivities.length}
-            </span>
-          </CardHeader>
-          <CardContent className="flex h-72 flex-col gap-2 overflow-y-auto pt-0">
-            {pendingActivities.length === 0 && (
-              <p className="py-8 text-center text-xs text-slate-400">Nenhuma atividade pendente. 🎉</p>
-            )}
-            {pendingActivities.map((activity) => {
-              const assignees = activity.assigneeIds.map((id) => userMap.get(id)).filter((u) => !!u)
-              return (
-                <div
-                  key={activity.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5 dark:border-slate-800"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{activity.title}</p>
-                    <p className="text-[11px] text-slate-400">Criada em {formatDate(activity.createdAt.slice(0, 10))}</p>
-                  </div>
-                  <div className="flex shrink-0 -space-x-1.5">
-                    {assignees.map((u) => (
-                      <div key={u.id} title={u.name} className="ring-2 ring-white dark:ring-slate-900">
-                        <Avatar user={u} size={24} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <ActivityListCard
+          title="Atividades pendentes"
+          activities={pendingActivities}
+          userMap={userMap}
+          emptyMessage="Nenhuma atividade pendente. 🎉"
+        />
+        <ActivityListCard
+          title="Atividades em andamento"
+          activities={inProgressActivities}
+          userMap={userMap}
+          emptyMessage="Nenhuma atividade em andamento."
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
