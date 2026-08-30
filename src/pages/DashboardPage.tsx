@@ -215,7 +215,7 @@ export function DashboardPage() {
         />
       </div>
 
-      <Card className="mb-6">
+      <Card className="mb-6 border-t-4 border-t-indigo-500">
         <CardHeader>
           <CardTitle>Calendário da equipe</CardTitle>
         </CardHeader>
@@ -225,7 +225,7 @@ export function DashboardPage() {
       </Card>
 
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="border-t-4 border-t-indigo-500">
           <CardHeader>
             <CardTitle>Produtividade</CardTitle>
           </CardHeader>
@@ -244,7 +244,7 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-t-4 border-t-indigo-500">
           <CardHeader>
             <CardTitle>Horas trabalhadas por pessoa</CardTitle>
           </CardHeader>
