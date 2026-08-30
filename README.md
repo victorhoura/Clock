@@ -1,4 +1,4 @@
-# Pulse — Produtividade em Equipe
+# Gestão Plantão Digital — Produtividade em Equipe
 
 Aplicativo web para controle de produtividade de equipes pequenas: dashboard geral, bater ponto (entrada/saída) e gerenciamento de atividades e membros. Cadastro de usuários é manual (sem login Google/OAuth).
 

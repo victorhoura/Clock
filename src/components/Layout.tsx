@@ -29,7 +29,7 @@ export function Layout({ active, onChange, children }: LayoutProps) {
             <LayoutDashboard size={18} />
           </div>
           <div>
-            <p className="text-sm font-bold leading-tight text-slate-900 dark:text-white">Pulse</p>
+            <p className="text-sm font-bold leading-tight text-slate-900 dark:text-white">Gestão Plantão Digital</p>
             <p className="text-[11px] leading-tight text-slate-400">Produtividade em equipe</p>
           </div>
         </div>
@@ -71,7 +71,7 @@ export function Layout({ active, onChange, children }: LayoutProps) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
               <LayoutDashboard size={16} />
             </div>
-            <p className="text-sm font-bold text-slate-900 dark:text-white">Pulse</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">Gestão Plantão Digital</p>
           </div>
           <button
             onClick={toggleTheme}

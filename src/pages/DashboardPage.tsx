@@ -166,7 +166,7 @@ export function DashboardPage() {
           <CardHeader>
             <CardTitle>Ranking de produtividade</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3 pt-0">
+          <CardContent className="flex flex-col gap-3 pt-4">
             {ranking.length === 0 && <p className="py-8 text-center text-xs text-slate-400">Sem dados ainda.</p>}
             {ranking.map((r, i) => (
               <div key={r.user.id} className="flex items-center gap-3">
@@ -199,7 +199,7 @@ export function DashboardPage() {
                   itemStyle={tooltipItemStyle}
                   formatter={(value) => [formatHours(Number(value)), 'Horas']}
                 />
-                <Bar dataKey="hours" radius={[8, 8, 0, 0]}>
+                <Bar dataKey="hours" radius={[8, 8, 0, 0]} isAnimationActive={false}>
                   {hoursByUser.map((entry) => (
                     <Cell key={entry.name} fill={entry.color} />
                   ))}
@@ -268,7 +268,14 @@ export function DashboardPage() {
                   formatter={(value) => [formatHours(Number(value)), 'Horas']}
                   labelFormatter={(d) => `Dia ${String(d).slice(8, 10)}/${String(d).slice(5, 7)}`}
                 />
-                <Line type="monotone" dataKey="hours" stroke="#6366f1" strokeWidth={2.5} dot={false} />
+                <Line
+                  type="monotone"
+                  dataKey="hours"
+                  stroke="#6366f1"
+                  strokeWidth={2.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -288,6 +295,7 @@ export function DashboardPage() {
                   innerRadius={50}
                   outerRadius={80}
                   paddingAngle={3}
+                  isAnimationActive={false}
                 >
                   {statusDistribution.map((entry) => (
                     <Cell key={entry.name} fill={STATUS_COLORS[entry.name]} />
