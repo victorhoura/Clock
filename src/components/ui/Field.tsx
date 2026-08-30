@@ -56,7 +56,7 @@ function useDismissableOpen(open: boolean, onDismiss: () => void, containerRef: 
 }
 
 const popoverListClasses =
-  'absolute z-20 mt-1.5 max-h-60 w-full min-w-max overflow-auto rounded-xl border border-slate-200 bg-white p-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800'
+  'absolute z-20 mt-1.5 max-h-60 w-full min-w-max max-w-[calc(100vw-2rem)] overflow-auto rounded-xl border border-slate-200 bg-white p-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800'
 
 interface SelectProps {
   value: string

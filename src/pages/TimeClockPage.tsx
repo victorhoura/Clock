@@ -54,7 +54,7 @@ export function TimeClockPage() {
             {selectedUser && (
               <>
                 <Avatar user={selectedUser} size={72} />
-                <div>
+                <div className="w-full max-w-full break-words">
                   <p className="text-base font-semibold text-slate-800 dark:text-slate-100">{selectedUser.name}</p>
                   <p className="text-xs text-slate-400">{selectedUser.role || 'Sem cargo definido'}</p>
                 </div>
