@@ -5,6 +5,7 @@ export interface TeamMember {
   name: string
   role: string
   color: string
+  avatarUrl: string | null
   createdAt: string
 }
 

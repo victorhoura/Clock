@@ -7,7 +7,14 @@ const THEME_KEY = 'team-productivity-theme'
 const MEMBER_COLORS = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6']
 
 function fromMemberRow(row: TeamMemberRow): TeamMember {
-  return { id: row.id, name: row.name, role: row.role, color: row.color, createdAt: row.created_at }
+  return {
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    color: row.color,
+    avatarUrl: row.avatar_url,
+    createdAt: row.created_at,
+  }
 }
 
 function fromEntryRow(row: TimeEntryRow): TimeEntry {
@@ -42,8 +49,11 @@ interface AppContextValue {
   loading: boolean
 
   users: TeamMember[]
-  addUser: (name: string, role: string) => Promise<void>
-  updateUser: (id: string, updates: Partial<Pick<TeamMember, 'name' | 'role' | 'color'>>) => Promise<void>
+  addUser: (id: string, name: string, role: string, avatarUrl: string | null) => Promise<void>
+  updateUser: (
+    id: string,
+    updates: Partial<Pick<TeamMember, 'name' | 'role' | 'color' | 'avatarUrl'>>,
+  ) => Promise<void>
   removeUser: (id: string) => Promise<void>
 
   timeEntries: TimeEntry[]
@@ -136,13 +146,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
-  const addUser = async (name: string, role: string) => {
+  const addUser = async (id: string, name: string, role: string, avatarUrl: string | null) => {
     const color = MEMBER_COLORS[users.length % MEMBER_COLORS.length]
-    await supabase.from('team_members').insert({ name: name.trim(), role: role.trim(), color })
+    await supabase
+      .from('team_members')
+      .insert({ id, name: name.trim(), role: role.trim(), color, avatar_url: avatarUrl })
   }
 
   const updateUser: AppContextValue['updateUser'] = async (id, updates) => {
-    await supabase.from('team_members').update(updates).eq('id', id)
+    const { avatarUrl, ...rest } = updates
+    const payload: Record<string, unknown> = { ...rest }
+    if (avatarUrl !== undefined) payload.avatar_url = avatarUrl
+    await supabase.from('team_members').update(payload).eq('id', id)
   }
 
   const removeUser = async (id: string) => {

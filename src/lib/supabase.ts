@@ -14,7 +14,21 @@ export interface TeamMemberRow {
   name: string
   role: string
   color: string
+  avatar_url: string | null
   created_at: string
+}
+
+const AVATAR_BUCKET = 'avatars'
+
+export async function uploadAvatar(userId: string, file: File): Promise<string> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const path = `${userId}/${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from(AVATAR_BUCKET).upload(path, file, {
+    upsert: true,
+    cacheControl: '3600',
+  })
+  if (error) throw error
+  return supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path).data.publicUrl
 }
 
 export interface TimeEntryRow {
