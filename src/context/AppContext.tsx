@@ -54,6 +54,7 @@ interface AppContextValue {
 
   activities: Activity[]
   addActivity: (assigneeIds: string[], title: string, description: string) => Promise<void>
+  updateActivity: (id: string, assigneeIds: string[], title: string, description: string) => Promise<void>
   updateActivityStatus: (id: string, status: ActivityStatus) => Promise<void>
   deleteActivity: (id: string) => Promise<void>
 }
@@ -180,6 +181,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const updateActivity = async (id: string, assigneeIds: string[], title: string, description: string) => {
+    await supabase
+      .from('activities')
+      .update({ assignee_ids: assigneeIds, title: title.trim(), description: description.trim() })
+      .eq('id', id)
+  }
+
   const updateActivityStatus = async (id: string, status: ActivityStatus) => {
     await supabase
       .from('activities')
@@ -207,6 +215,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       deleteTimeEntry,
       activities,
       addActivity,
+      updateActivity,
       updateActivityStatus,
       deleteActivity,
     }),

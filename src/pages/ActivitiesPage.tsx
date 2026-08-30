@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import { useApp } from '../context/AppContext'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
@@ -16,8 +16,9 @@ const COLUMNS: { id: ActivityStatus; label: string; accent: string }[] = [
 ]
 
 export function ActivitiesPage() {
-  const { users, activities, addActivity, updateActivityStatus, deleteActivity } = useApp()
+  const { users, activities, addActivity, updateActivity, updateActivityStatus, deleteActivity } = useApp()
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
@@ -35,15 +36,28 @@ export function ActivitiesPage() {
   }, [activities])
 
   function openNew() {
+    setEditingId(null)
     setTitle('')
     setDescription('')
     setAssigneeIds(users[0] ? [users[0].id] : [])
     setModalOpen(true)
   }
 
+  function openEdit(activity: Activity) {
+    setEditingId(activity.id)
+    setTitle(activity.title)
+    setDescription(activity.description)
+    setAssigneeIds(activity.assigneeIds)
+    setModalOpen(true)
+  }
+
   function handleSubmit() {
     if (!title.trim() || assigneeIds.length === 0) return
-    addActivity(assigneeIds, title, description)
+    if (editingId) {
+      updateActivity(editingId, assigneeIds, title, description)
+    } else {
+      addActivity(assigneeIds, title, description)
+    }
     setModalOpen(false)
   }
 
@@ -128,13 +142,22 @@ export function ActivitiesPage() {
                   >
                     <div className="mb-2 flex items-start justify-between gap-2">
                       <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{activity.title}</p>
-                      <button
-                        onClick={() => deleteActivity(activity.id)}
-                        className="shrink-0 rounded-lg p-1 text-slate-300 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40"
-                        aria-label="Excluir atividade"
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      <div className="flex shrink-0 gap-1">
+                        <button
+                          onClick={() => openEdit(activity)}
+                          className="rounded-lg p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                          aria-label="Editar atividade"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => deleteActivity(activity.id)}
+                          className="rounded-lg p-1 text-slate-300 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40"
+                          aria-label="Excluir atividade"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                     {activity.description && (
                       <p className="mb-3 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
@@ -159,7 +182,7 @@ export function ActivitiesPage() {
         ))}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nova atividade">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? 'Editar atividade' : 'Nova atividade'}>
         <Field label="Título">
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Revisar layout do app" autoFocus />
         </Field>
@@ -179,7 +202,7 @@ export function ActivitiesPage() {
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={!title.trim() || assigneeIds.length === 0}>
-            Criar atividade
+            {editingId ? 'Salvar alterações' : 'Criar atividade'}
           </Button>
         </div>
       </Modal>
