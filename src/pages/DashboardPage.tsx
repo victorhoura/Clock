@@ -190,7 +190,7 @@ export function DashboardPage() {
                   cursor={{ fill: 'rgba(99,102,241,0.08)' }}
                   contentStyle={tooltipStyle}
                   itemStyle={tooltipItemStyle}
-                  formatter={(value) => [`${value}h`, 'Horas']}
+                  formatter={(value) => [formatHours(Number(value)), 'Horas']}
                 />
                 <Bar dataKey="hours" radius={[8, 8, 0, 0]}>
                   {hoursByUser.map((entry) => (
@@ -249,7 +249,7 @@ export function DashboardPage() {
                 <Tooltip
                   contentStyle={tooltipStyle}
                   itemStyle={tooltipItemStyle}
-                  formatter={(value) => [`${value}h`, 'Horas']}
+                  formatter={(value) => [formatHours(Number(value)), 'Horas']}
                   labelFormatter={(d) => `Dia ${String(d).slice(8, 10)}/${String(d).slice(5, 7)}`}
                 />
                 <Line type="monotone" dataKey="hours" stroke="#6366f1" strokeWidth={2.5} dot={false} />

@@ -21,7 +21,7 @@ export function lastNDays(n: number): string[] {
 export function hoursPerUser(entries: TimeEntry[], users: TeamMember[]): { name: string; hours: number; color: string }[] {
   const map = new Map<string, number>()
   for (const e of entries) map.set(e.userId, (map.get(e.userId) ?? 0) + entryDurationHours(e))
-  return users.map((u) => ({ name: u.name.split(' ')[0], hours: Number((map.get(u.id) ?? 0).toFixed(1)), color: u.color }))
+  return users.map((u) => ({ name: u.name.split(' ')[0], hours: map.get(u.id) ?? 0, color: u.color }))
 }
 
 export function completedPerUser(activities: Activity[], users: TeamMember[]): { name: string; completed: number; color: string }[] {
@@ -36,5 +36,5 @@ export function completedPerUser(activities: Activity[], users: TeamMember[]): {
 export function dailyTeamHours(entries: TimeEntry[], days: string[]): { date: string; hours: number }[] {
   const map = new Map<string, number>()
   for (const e of entries) map.set(e.date, (map.get(e.date) ?? 0) + entryDurationHours(e))
-  return days.map((d) => ({ date: d, hours: Number((map.get(d) ?? 0).toFixed(1)) }))
+  return days.map((d) => ({ date: d, hours: map.get(d) ?? 0 }))
 }
