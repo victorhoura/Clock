@@ -219,7 +219,7 @@ export function DashboardPage() {
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Ranking de produtividade</CardTitle>
+            <CardTitle>Produtividade</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 pt-4">
             {ranking.length === 0 && <p className="py-8 text-center text-xs text-slate-400">Sem dados ainda.</p>}
