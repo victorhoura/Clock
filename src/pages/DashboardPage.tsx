@@ -22,15 +22,17 @@ function StatCard({
   value,
   sub,
   tint,
+  accent,
 }: {
   icon: typeof Clock
   label: string
   value: string
   sub: string
   tint: string
+  accent: string
 }) {
   return (
-    <Card>
+    <Card className={`border-t-4 ${accent}`}>
       <CardContent className="flex items-start gap-3.5">
         <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tint}`}>
           <Icon size={20} />
@@ -50,14 +52,16 @@ function ActivityListCard({
   activities,
   userMap,
   emptyMessage,
+  accent,
 }: {
   title: string
   activities: Activity[]
   userMap: Map<string, TeamMember>
   emptyMessage: string
+  accent: string
 }) {
   return (
-    <Card>
+    <Card className={`border-t-4 ${accent}`}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
@@ -183,6 +187,7 @@ export function DashboardPage() {
           value={formatHours(weekHours)}
           sub={`${formatHours(allTimeHours)} total`}
           tint="bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
+          accent="border-t-indigo-400 dark:border-t-indigo-500"
         />
         <StatCard
           icon={CheckCircle2}
@@ -190,6 +195,7 @@ export function DashboardPage() {
           value={String(completedThisWeek)}
           sub={`${totalCompleted} no total`}
           tint="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+          accent="border-t-emerald-400 dark:border-t-emerald-500"
         />
         <StatCard
           icon={Users}
@@ -197,6 +203,7 @@ export function DashboardPage() {
           value={String(users.length)}
           sub={`${activeNow} trabalhando agora`}
           tint="bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
+          accent="border-t-amber-400 dark:border-t-amber-500"
         />
         <StatCard
           icon={ListTodo}
@@ -204,6 +211,7 @@ export function DashboardPage() {
           value={String(activities.filter((a) => a.status !== 'completed').length)}
           sub={`${activities.length} criadas`}
           tint="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          accent="border-t-rose-400 dark:border-t-rose-500"
         />
       </div>
 
@@ -269,12 +277,14 @@ export function DashboardPage() {
           activities={pendingActivities}
           userMap={userMap}
           emptyMessage="Nenhuma atividade pendente. 🎉"
+          accent="border-t-slate-300 dark:border-t-slate-600"
         />
         <ActivityListCard
           title="Atividades em andamento"
           activities={inProgressActivities}
           userMap={userMap}
           emptyMessage="Nenhuma atividade em andamento."
+          accent="border-t-amber-400"
         />
       </div>
 
