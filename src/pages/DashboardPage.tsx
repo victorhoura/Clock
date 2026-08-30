@@ -5,8 +5,8 @@ import { useApp } from '../context/AppContext'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { TeamCalendar } from '../components/TeamCalendar'
 import { Avatar } from '../components/ui/Avatar'
-import { completedPerUser, dailyTeamHours, hoursInRange, hoursPerUser, lastNDays } from '../utils/stats'
-import { formatHours } from '../utils/time'
+import { dailyTeamHours, hoursInRange, hoursPerUser, lastNDays } from '../utils/stats'
+import { formatDate, formatHours } from '../utils/time'
 
 const AXIS_COLOR = '#94a3b8'
 const STATUS_COLORS: Record<string, string> = {
@@ -77,8 +77,15 @@ export function DashboardPage() {
   const totalCompleted = useMemo(() => activities.filter((a) => a.status === 'completed').length, [activities])
   const activeNow = useMemo(() => timeEntries.filter((e) => e.clockOut === null).length, [timeEntries])
 
+  const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users])
   const hoursByUser = useMemo(() => hoursPerUser(timeEntries, users), [timeEntries, users])
-  const completedByUser = useMemo(() => completedPerUser(activities, users), [activities, users])
+  const pendingActivities = useMemo(
+    () =>
+      activities
+        .filter((a) => a.status === 'pending')
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+    [activities],
+  )
   const dailyHours = useMemo(() => dailyTeamHours(timeEntries, days14), [timeEntries, days14])
 
   const statusDistribution = useMemo(() => {
@@ -204,27 +211,36 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Atividades concluídas por pessoa</CardTitle>
+            <CardTitle>Atividades pendentes</CardTitle>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+              {pendingActivities.length}
+            </span>
           </CardHeader>
-          <CardContent className="h-72 pt-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={completedByUser} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: AXIS_COLOR, fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: AXIS_COLOR, fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip
-                  cursor={{ fill: 'rgba(16,185,129,0.08)' }}
-                  contentStyle={tooltipStyle}
-                  itemStyle={tooltipItemStyle}
-                  formatter={(value) => [value, 'Concluídas']}
-                />
-                <Bar dataKey="completed" radius={[8, 8, 0, 0]}>
-                  {completedByUser.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="flex h-72 flex-col gap-2 overflow-y-auto pt-0">
+            {pendingActivities.length === 0 && (
+              <p className="py-8 text-center text-xs text-slate-400">Nenhuma atividade pendente. 🎉</p>
+            )}
+            {pendingActivities.map((activity) => {
+              const assignees = activity.assigneeIds.map((id) => userMap.get(id)).filter((u) => !!u)
+              return (
+                <div
+                  key={activity.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5 dark:border-slate-800"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{activity.title}</p>
+                    <p className="text-[11px] text-slate-400">Criada em {formatDate(activity.createdAt.slice(0, 10))}</p>
+                  </div>
+                  <div className="flex shrink-0 -space-x-1.5">
+                    {assignees.map((u) => (
+                      <div key={u.id} title={u.name} className="ring-2 ring-white dark:ring-slate-900">
+                        <Avatar user={u} size={24} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </CardContent>
         </Card>
       </div>

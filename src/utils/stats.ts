@@ -1,4 +1,4 @@
-import type { Activity, TeamMember, TimeEntry } from '../types'
+import type { TeamMember, TimeEntry } from '../types'
 import { entryDurationHours, toISODate } from './time'
 
 export function hoursInRange(entries: TimeEntry[], fromISO: string, toISO: string): number {
@@ -22,15 +22,6 @@ export function hoursPerUser(entries: TimeEntry[], users: TeamMember[]): { name:
   const map = new Map<string, number>()
   for (const e of entries) map.set(e.userId, (map.get(e.userId) ?? 0) + entryDurationHours(e))
   return users.map((u) => ({ name: u.name.split(' ')[0], hours: map.get(u.id) ?? 0, color: u.color }))
-}
-
-export function completedPerUser(activities: Activity[], users: TeamMember[]): { name: string; completed: number; color: string }[] {
-  const map = new Map<string, number>()
-  for (const a of activities) {
-    if (a.status !== 'completed') continue
-    for (const userId of a.assigneeIds) map.set(userId, (map.get(userId) ?? 0) + 1)
-  }
-  return users.map((u) => ({ name: u.name.split(' ')[0], completed: map.get(u.id) ?? 0, color: u.color }))
 }
 
 export function dailyTeamHours(entries: TimeEntry[], days: string[]): { date: string; hours: number }[] {
