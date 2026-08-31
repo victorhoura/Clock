@@ -12,8 +12,6 @@ import { useApp } from './context/AppContext'
 // Remover depois que o bug for identificado.
 function useOverflowDebug(tab: Tab) {
   useEffect(() => {
-    let lastMarked: HTMLElement | null = null
-
     function scan() {
       const vw = document.documentElement.clientWidth
       let badge = document.getElementById('debug-overflow-badge')
@@ -25,57 +23,38 @@ function useOverflowDebug(tab: Tab) {
         document.body.appendChild(badge)
       }
 
-      // Segue o filho mais largo em cada nível, a partir de <main> (o
-      // cabeçalho/nav só herdam a largura do container esticado), para
-      // localizar exatamente onde a largura salta acima da tela.
-      const chain: string[] = [`vw=${vw}`]
-      let node: Element = document.querySelector('main') ?? document.body
-      for (let depth = 0; depth < 16; depth++) {
-        const w = Math.round(node.getBoundingClientRect().width)
-        const cls = (node.getAttribute('class') || '').trim().split(/\s+/).slice(0, 3).join('.')
-        chain.push(`${'  '.repeat(depth)}<${node.tagName.toLowerCase()}${cls ? '.' + cls : ''}> w=${w}`)
-
-        let widestChild: Element | null = null
-        let widestW = -1
-        for (const child of Array.from(node.children)) {
-          if (child.id === 'debug-overflow-badge') continue
-          const cw = child.getBoundingClientRect().width
-          if (cw > widestW) {
-            widestW = cw
-            widestChild = child
-          }
+      // Relatório direto: largura de <main> e de cada filho direto dele
+      // (blocos irmãos sempre herdam a mesma largura ambiente, então isso
+      // não aponta a causa, só o formato), e de cada Card + da tabela
+      // (candidata mais forte, mesmo tendo overflow-x-auto).
+      const report: string[] = [`vw=${vw}`]
+      const mainEl = document.querySelector('main')
+      if (mainEl) {
+        report.push(`<main> w=${Math.round(mainEl.getBoundingClientRect().width)}`)
+        Array.from(mainEl.children).forEach((c, i) => {
+          const cls = (c.getAttribute('class') || '').trim().split(/\s+/).slice(0, 2).join('.')
+          report.push(`  child[${i}] <${c.tagName.toLowerCase()}.${cls}> w=${Math.round(c.getBoundingClientRect().width)}`)
+        })
+      }
+      report.push('--- cards ---')
+      document.querySelectorAll<HTMLElement>('.rounded-2xl').forEach((card, i) => {
+        report.push(`Card[${i}] w=${Math.round(card.getBoundingClientRect().width)} sw=${card.scrollWidth}`)
+      })
+      const table = document.querySelector('table')
+      if (table) {
+        report.push('--- tabela ---')
+        report.push(`<table> w=${Math.round(table.getBoundingClientRect().width)} scrollWidth=${table.scrollWidth}`)
+        const wrapper = table.parentElement
+        if (wrapper) {
+          report.push(`wrapper(overflow-x-auto) w=${Math.round(wrapper.getBoundingClientRect().width)} scrollWidth=${wrapper.scrollWidth}`)
         }
-        if (!widestChild) break
-        node = widestChild
       }
 
-      // Acima só mostra elementos herdando a largura ambiente (todo mundo
-      // vira 100% do pai). O que realmente FORÇA a largura mínima é texto
-      // com white-space:nowrap (ex.: truncate) — lista todos, com a
-      // largura real, pra achar o que está anormalmente largo.
-      const nowrapHits: string[] = []
-      document.querySelectorAll<HTMLElement>('body *').forEach((el) => {
-        if (el.id === 'debug-overflow-badge') return
-        const ws = getComputedStyle(el).whiteSpace
-        if (ws === 'nowrap' || ws === 'pre') {
-          const cls = (el.getAttribute('class') || '').trim().split(/\s+/).slice(0, 3).join('.')
-          const text = (el.textContent || '').trim().slice(0, 25)
-          const w = Math.round(el.getBoundingClientRect().width)
-          nowrapHits.push(`<${el.tagName.toLowerCase()}.${cls}> w=${w} sw=${el.scrollWidth} "${text}"`)
-        }
-      })
-
-      badge.textContent = chain.join('\n') + '\n--- nowrap ---\n' + (nowrapHits.join('\n') || '(nenhum)')
-
-      if (lastMarked) lastMarked.style.outline = ''
-      lastMarked = node as HTMLElement
-      lastMarked.style.outline = '4px solid red'
-      lastMarked.style.outlineOffset = '-4px'
+      badge.textContent = report.join('\n')
     }
     const id = setInterval(scan, 500)
     return () => {
       clearInterval(id)
-      if (lastMarked) lastMarked.style.outline = ''
       document.getElementById('debug-overflow-badge')?.remove()
     }
   }, [tab])
