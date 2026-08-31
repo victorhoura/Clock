@@ -12,6 +12,8 @@ import { useApp } from './context/AppContext'
 // Remover depois que o bug for identificado.
 function useOverflowDebug(tab: Tab) {
   useEffect(() => {
+    let lastMarked: HTMLElement | null = null
+
     function scan() {
       const vw = document.documentElement.clientWidth
       let badge = document.getElementById('debug-overflow-badge')
@@ -19,23 +21,43 @@ function useOverflowDebug(tab: Tab) {
         badge = document.createElement('div')
         badge.id = 'debug-overflow-badge'
         badge.style.cssText =
-          'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;font-size:11px;padding:2px 6px;font-family:monospace;pointer-events:none;'
+          'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;font-size:10px;line-height:1.4;padding:4px 6px;font-family:monospace;pointer-events:none;white-space:pre-wrap;max-height:45vh;overflow:auto;'
         document.body.appendChild(badge)
       }
-      badge.textContent = `vw=${vw} scrollWidth=${document.documentElement.scrollWidth} bodyScrollWidth=${document.body.scrollWidth}`
 
-      document.querySelectorAll<HTMLElement>('body *').forEach((el) => {
-        if (el.id === 'debug-overflow-badge') return
-        const r = el.getBoundingClientRect()
-        if (r.right > vw + 1 && r.width > 0) {
-          el.style.outline = '3px solid red'
-          el.style.outlineOffset = '-3px'
+      // Segue o filho mais largo em cada nível, a partir do body, para
+      // localizar exatamente onde a largura salta acima da tela.
+      const chain: string[] = [`vw=${vw}`]
+      let node: Element = document.body
+      for (let depth = 0; depth < 16; depth++) {
+        const w = Math.round(node.getBoundingClientRect().width)
+        const cls = (node.getAttribute('class') || '').trim().split(/\s+/).slice(0, 3).join('.')
+        chain.push(`${'  '.repeat(depth)}<${node.tagName.toLowerCase()}${cls ? '.' + cls : ''}> w=${w}`)
+
+        let widestChild: Element | null = null
+        let widestW = -1
+        for (const child of Array.from(node.children)) {
+          if (child.id === 'debug-overflow-badge') continue
+          const cw = child.getBoundingClientRect().width
+          if (cw > widestW) {
+            widestW = cw
+            widestChild = child
+          }
         }
-      })
+        if (!widestChild) break
+        node = widestChild
+      }
+      badge.textContent = chain.join('\n')
+
+      if (lastMarked) lastMarked.style.outline = ''
+      lastMarked = node as HTMLElement
+      lastMarked.style.outline = '4px solid red'
+      lastMarked.style.outlineOffset = '-4px'
     }
-    const id = setInterval(scan, 400)
+    const id = setInterval(scan, 500)
     return () => {
       clearInterval(id)
+      if (lastMarked) lastMarked.style.outline = ''
       document.getElementById('debug-overflow-badge')?.remove()
     }
   }, [tab])
