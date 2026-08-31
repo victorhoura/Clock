@@ -25,10 +25,11 @@ function useOverflowDebug(tab: Tab) {
         document.body.appendChild(badge)
       }
 
-      // Segue o filho mais largo em cada nível, a partir do body, para
+      // Segue o filho mais largo em cada nível, a partir de <main> (o
+      // cabeçalho/nav só herdam a largura do container esticado), para
       // localizar exatamente onde a largura salta acima da tela.
       const chain: string[] = [`vw=${vw}`]
-      let node: Element = document.body
+      let node: Element = document.querySelector('main') ?? document.body
       for (let depth = 0; depth < 16; depth++) {
         const w = Math.round(node.getBoundingClientRect().width)
         const cls = (node.getAttribute('class') || '').trim().split(/\s+/).slice(0, 3).join('.')
