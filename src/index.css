@@ -31,6 +31,30 @@ body {
   font-family: var(--font-sans);
 }
 
+/* iOS Safari zooms the whole page in when a focused field has a font
+   smaller than 16px, and never zooms back out. Our fields use text-sm
+   (14px), so on phones they are bumped to 16px — the design keeps its
+   smaller size from the md breakpoint up, where the behavior is absent. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Keeps pinch-to-zoom, drops the double-tap-to-zoom gesture, which
+   otherwise fires on quick repeated taps and leaves the page zoomed. */
+button,
+input,
+textarea,
+select,
+a,
+[role='button'],
+[role='option'] {
+  touch-action: manipulation;
+}
+
 * {
   scrollbar-color: rgb(148 163 184 / 0.5) transparent;
 }
