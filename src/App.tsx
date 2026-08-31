@@ -21,7 +21,7 @@ function useOverflowDebug(tab: Tab) {
         badge = document.createElement('div')
         badge.id = 'debug-overflow-badge'
         badge.style.cssText =
-          'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;font-size:10px;line-height:1.4;padding:4px 6px;font-family:monospace;pointer-events:none;white-space:pre-wrap;max-height:45vh;overflow:auto;'
+          'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;font-size:9px;line-height:1.35;padding:4px 6px;font-family:monospace;pointer-events:none;white-space:pre-wrap;max-height:60vh;overflow:auto;'
         document.body.appendChild(badge)
       }
 
@@ -48,7 +48,24 @@ function useOverflowDebug(tab: Tab) {
         if (!widestChild) break
         node = widestChild
       }
-      badge.textContent = chain.join('\n')
+
+      // Acima só mostra elementos herdando a largura ambiente (todo mundo
+      // vira 100% do pai). O que realmente FORÇA a largura mínima é texto
+      // com white-space:nowrap (ex.: truncate) — lista todos, com a
+      // largura real, pra achar o que está anormalmente largo.
+      const nowrapHits: string[] = []
+      document.querySelectorAll<HTMLElement>('body *').forEach((el) => {
+        if (el.id === 'debug-overflow-badge') return
+        const ws = getComputedStyle(el).whiteSpace
+        if (ws === 'nowrap' || ws === 'pre') {
+          const cls = (el.getAttribute('class') || '').trim().split(/\s+/).slice(0, 3).join('.')
+          const text = (el.textContent || '').trim().slice(0, 25)
+          const w = Math.round(el.getBoundingClientRect().width)
+          nowrapHits.push(`<${el.tagName.toLowerCase()}.${cls}> w=${w} sw=${el.scrollWidth} "${text}"`)
+        }
+      })
+
+      badge.textContent = chain.join('\n') + '\n--- nowrap ---\n' + (nowrapHits.join('\n') || '(nenhum)')
 
       if (lastMarked) lastMarked.style.outline = ''
       lastMarked = node as HTMLElement
