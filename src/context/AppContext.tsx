@@ -4,7 +4,24 @@ import { supabase, type ActivityRow, type TeamMemberRow, type TimeEntryRow } fro
 import { todayISODate } from '../utils/time'
 
 const THEME_KEY = 'team-productivity-theme'
-const MEMBER_COLORS = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6']
+// Ordered so the first members picked are the easiest to tell apart in the
+// charts: indigo, amber, emerald, then sky, pink and violet.
+const MEMBER_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#0ea5e9', '#ec4899', '#8b5cf6']
+
+// Indexing the palette by users.length hands out a duplicate whenever the
+// local list is behind the database (a member added elsewhere, or one removed),
+// which shows up as two people sharing a bar color. Take the first unused
+// color instead, falling back to the least used one once the palette runs out.
+function nextMemberColor(users: TeamMember[]): string {
+  const inUse = users.map((u) => u.color)
+  const unused = MEMBER_COLORS.find((c) => !inUse.includes(c))
+  if (unused) return unused
+  return MEMBER_COLORS.reduce((least, color) => {
+    const count = inUse.filter((c) => c === color).length
+    const leastCount = inUse.filter((c) => c === least).length
+    return count < leastCount ? color : least
+  }, MEMBER_COLORS[0])
+}
 
 function fromMemberRow(row: TeamMemberRow): TeamMember {
   return {
@@ -147,7 +164,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
   const addUser = async (id: string, name: string, role: string, avatarUrl: string | null) => {
-    const color = MEMBER_COLORS[users.length % MEMBER_COLORS.length]
+    const color = nextMemberColor(users)
     await supabase
       .from('team_members')
       .insert({ id, name: name.trim(), role: role.trim(), color, avatar_url: avatarUrl })
