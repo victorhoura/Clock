@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import { useApp } from '../context/AppContext'
@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { Field, Input, MultiSelect, Textarea } from '../components/ui/Field'
 import { Avatar } from '../components/ui/Avatar'
+import { useDragToColumn } from '../hooks/useDragToColumn'
 import type { Activity, ActivityStatus } from '../types'
 
 const COLUMNS: { id: ActivityStatus; label: string; accent: string }[] = [
@@ -22,10 +23,19 @@ export function ActivitiesPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
-  const [draggingId, setDraggingId] = useState<string | null>(null)
-  const [dragOverColumn, setDragOverColumn] = useState<ActivityStatus | null>(null)
 
   const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users])
+
+  const handleDrop = useCallback(
+    (id: string, column: string) => {
+      const activity = activities.find((a) => a.id === id)
+      if (activity && activity.status !== column) updateActivityStatus(id, column as ActivityStatus)
+    },
+    [activities, updateActivityStatus],
+  )
+
+  const { draggingId, overColumn, dragPosition, cardProps } = useDragToColumn(handleDrop)
+  const draggingActivity = activities.find((a) => a.id === draggingId)
 
   const grouped = useMemo(() => {
     const map: Record<ActivityStatus, Activity[]> = { pending: [], in_progress: [], completed: [] }
@@ -61,13 +71,6 @@ export function ActivitiesPage() {
     setModalOpen(false)
   }
 
-  function handleDrop(status: ActivityStatus) {
-    const activity = activities.find((a) => a.id === draggingId)
-    if (activity && activity.status !== status) updateActivityStatus(activity.id, status)
-    setDraggingId(null)
-    setDragOverColumn(null)
-  }
-
   if (users.length === 0) {
     return (
       <Card>
@@ -97,10 +100,13 @@ export function ActivitiesPage() {
         {COLUMNS.map((col) => (
           <Card
             key={col.id}
+            data-column={col.id}
             className={clsx(
               'border-t-4 transition-colors',
               col.accent,
-              dragOverColumn === col.id && 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-950',
+              overColumn === col.id &&
+                draggingActivity?.status !== col.id &&
+                'ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-950',
             )}
           >
             <CardHeader>
@@ -109,18 +115,7 @@ export function ActivitiesPage() {
                 {grouped[col.id].length}
               </span>
             </CardHeader>
-            <CardContent
-              className="flex min-h-24 flex-col gap-3"
-              onDragOver={(e) => {
-                e.preventDefault()
-                setDragOverColumn(col.id)
-              }}
-              onDragLeave={() => setDragOverColumn((c) => (c === col.id ? null : c))}
-              onDrop={(e) => {
-                e.preventDefault()
-                handleDrop(col.id)
-              }}
-            >
+            <CardContent className="flex min-h-24 flex-col gap-3">
               {grouped[col.id].length === 0 && (
                 <p className="py-6 text-center text-xs text-slate-400">Arraste uma atividade para cá.</p>
               )}
@@ -129,14 +124,9 @@ export function ActivitiesPage() {
                 return (
                   <div
                     key={activity.id}
-                    draggable
-                    onDragStart={() => setDraggingId(activity.id)}
-                    onDragEnd={() => {
-                      setDraggingId(null)
-                      setDragOverColumn(null)
-                    }}
+                    {...cardProps(activity.id)}
                     className={clsx(
-                      'cursor-grab rounded-xl border border-slate-100 p-3.5 active:cursor-grabbing dark:border-slate-800',
+                      'cursor-grab select-none rounded-xl border border-slate-100 p-3.5 active:cursor-grabbing dark:border-slate-800',
                       draggingId === activity.id && 'opacity-40',
                     )}
                   >
@@ -181,6 +171,15 @@ export function ActivitiesPage() {
           </Card>
         ))}
       </div>
+
+      {draggingActivity && dragPosition && (
+        <div
+          className="pointer-events-none fixed z-50 w-56 max-w-[70vw] -translate-x-1/2 -translate-y-1/2 rotate-3 rounded-xl border border-indigo-300 bg-white p-3.5 shadow-xl dark:border-indigo-500/60 dark:bg-slate-800"
+          style={{ left: dragPosition.x, top: dragPosition.y }}
+        >
+          <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{draggingActivity.title}</p>
+        </div>
+      )}
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? 'Editar atividade' : 'Nova atividade'}>
         <Field label="Título">
