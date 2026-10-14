@@ -5,8 +5,8 @@ rules_version = '2';
 // banco fica fechado. Cole este conteúdo em Firestore → Regras → Publicar.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{collection}/{docId} {
-      allow read, write: if collection in [
+    match /{coll}/{docId} {
+      allow read, write: if coll in [
         'team_members',
         'time_entries',
         'activities',
