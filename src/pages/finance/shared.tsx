@@ -51,20 +51,27 @@ export function PeriodNavigator({
     onChange({ year: d.getFullYear(), month: d.getMonth() })
   }
   return (
-    <div className="inline-flex items-center rounded-lg border border-slate-200/80 bg-white shadow-card dark:border-slate-800 dark:bg-surface-dark">
+    <div className="flex min-w-0 flex-1 items-center rounded-lg border border-slate-200/80 bg-white shadow-card dark:border-slate-800 dark:bg-surface-dark sm:inline-flex sm:flex-none">
       <button
         onClick={() => shift(-step)}
-        className="flex h-9 w-9 items-center justify-center rounded-l-lg text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-l-lg text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-200"
         aria-label={mode === 'month' ? 'Mês anterior' : 'Ano anterior'}
       >
         <ChevronLeft size={16} />
       </button>
-      <span className="min-w-36 px-2 text-center text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100">
-        {mode === 'month' ? periodLabel(period) : period.year}
+      <span className="min-w-0 flex-1 truncate px-1 text-center text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100 sm:min-w-36 sm:flex-none sm:px-2">
+        {mode === 'month' ? (
+          <>
+            <span className="sm:hidden">{`${MONTH_SHORT[period.month]} ${period.year}`}</span>
+            <span className="hidden sm:inline">{periodLabel(period)}</span>
+          </>
+        ) : (
+          period.year
+        )}
       </span>
       <button
         onClick={() => shift(step)}
-        className="flex h-9 w-9 items-center justify-center rounded-r-lg text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-r-lg text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-200"
         aria-label={mode === 'month' ? 'Próximo mês' : 'Próximo ano'}
       >
         <ChevronRight size={16} />

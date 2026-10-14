@@ -93,17 +93,17 @@ function FinanceContent() {
               value={tab}
               onChange={setTab}
               options={[
-                { value: 'overview', label: 'Visão geral', icon: BarChart3 },
-                { value: 'transactions', label: 'Lançamentos', icon: ListOrdered },
+                { value: 'overview', label: 'Visão geral', shortLabel: 'Geral', icon: BarChart3 },
+                { value: 'transactions', label: 'Lançamentos', shortLabel: 'Lançam.', icon: ListOrdered },
                 { value: 'bills', label: 'Contas', icon: CalendarClock, count: overdueCount },
-                { value: 'recurring', label: 'Custos fixos', icon: Repeat },
-                { value: 'annual', label: 'Relatório anual', icon: FileSpreadsheet },
+                { value: 'recurring', label: 'Custos fixos', shortLabel: 'Fixos', icon: Repeat },
+                { value: 'annual', label: 'Relatório anual', shortLabel: 'Anual', icon: FileSpreadsheet },
               ]}
             />
             {showPeriod && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
                 {tab !== 'annual' && (
-                  <div className="w-40">
+                  <div className="w-36 shrink-0 sm:w-40">
                     <ChoiceGroup
                       value={mode}
                       onChange={setMode}

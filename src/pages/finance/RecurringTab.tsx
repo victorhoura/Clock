@@ -40,7 +40,7 @@ export function RecurringTab({ onNew, onEdit }: { onNew: () => void; onEdit: (r:
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
         <KpiCard icon={Repeat} label="Custo fixo mensal" value={formatBRL(monthly)} tone="violet" sub={`${activeCount} ativos`} />
         <KpiCard icon={CalendarRange} label="Projeção anual" value={formatBRL(monthly * 12)} tone="indigo" sub="Custo fixo × 12 meses" />
         <KpiCard

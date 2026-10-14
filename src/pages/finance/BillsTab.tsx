@@ -64,7 +64,7 @@ export function BillsTab({ onEdit }: { onEdit: (t: FinanceTransaction) => void }
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
         <KpiCard
           icon={AlertTriangle}
           label="Vencidas"
