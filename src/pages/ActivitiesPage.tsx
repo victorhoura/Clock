@@ -3,17 +3,18 @@ import { Pencil, Plus, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import { useApp } from '../context/AppContext'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
-import { Modal } from '../components/ui/Modal'
+import { Button, IconButton } from '../components/ui/Button'
+import { Modal, ModalActions } from '../components/ui/Modal'
 import { Field, Input, MultiSelect, Textarea } from '../components/ui/Field'
 import { Avatar } from '../components/ui/Avatar'
+import { PageHeader } from '../components/ui/PageHeader'
 import { useDragToColumn } from '../hooks/useDragToColumn'
 import type { Activity, ActivityStatus } from '../types'
 
 const COLUMNS: { id: ActivityStatus; label: string; accent: string }[] = [
-  { id: 'pending', label: 'Pendente', accent: 'border-t-slate-300 dark:border-t-slate-600' },
-  { id: 'in_progress', label: 'Em andamento', accent: 'border-t-amber-400' },
-  { id: 'completed', label: 'Concluída', accent: 'border-t-emerald-400' },
+  { id: 'pending', label: 'Pendente', accent: 'bg-slate-400' },
+  { id: 'in_progress', label: 'Em andamento', accent: 'bg-amber-400' },
+  { id: 'completed', label: 'Concluída', accent: 'bg-emerald-500' },
 ]
 
 export function ActivitiesPage() {
@@ -83,18 +84,16 @@ export function ActivitiesPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Atividades</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Arraste os cartões entre as colunas para atualizar o status de cada atividade.
-          </p>
-        </div>
-        <Button onClick={openNew}>
-          <Plus size={16} />
-          Nova atividade
-        </Button>
-      </div>
+      <PageHeader
+        title="Atividades"
+        description="Arraste os cartões entre as colunas para atualizar o status de cada atividade."
+        actions={
+          <Button onClick={openNew}>
+            <Plus size={16} />
+            Nova atividade
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {COLUMNS.map((col) => (
@@ -102,16 +101,18 @@ export function ActivitiesPage() {
             key={col.id}
             data-column={col.id}
             className={clsx(
-              'border-t-4 transition-colors',
-              col.accent,
+              'bg-slate-50/50 transition-colors dark:bg-surface-dark',
               overColumn === col.id &&
                 draggingActivity?.status !== col.id &&
-                'ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-950',
+                'ring-2 ring-indigo-500 ring-offset-2 ring-offset-canvas dark:ring-offset-canvas-dark',
             )}
           >
             <CardHeader>
-              <CardTitle>{col.label}</CardTitle>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+              <CardTitle className="flex items-center gap-2">
+                <span className={clsx('h-2 w-2 rounded-full', col.accent)} />
+                {col.label}
+              </CardTitle>
+              <span className="rounded-md bg-white px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700">
                 {grouped[col.id].length}
               </span>
             </CardHeader>
@@ -126,27 +127,24 @@ export function ActivitiesPage() {
                     key={activity.id}
                     {...cardProps(activity.id)}
                     className={clsx(
-                      'cursor-grab select-none rounded-xl border border-slate-100 p-3.5 active:cursor-grabbing dark:border-slate-800',
+                      'cursor-grab select-none rounded-lg border border-slate-200/80 bg-white p-3.5 shadow-card transition-shadow hover:shadow-md active:cursor-grabbing dark:border-slate-800 dark:bg-slate-900/60',
                       draggingId === activity.id && 'opacity-40',
                     )}
                   >
                     <div className="mb-2 flex items-start justify-between gap-2">
                       <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{activity.title}</p>
                       <div className="flex shrink-0 gap-1">
-                        <button
-                          onClick={() => openEdit(activity)}
-                          className="rounded-lg p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-                          aria-label="Editar atividade"
-                        >
+                        <IconButton className="h-7 w-7" onClick={() => openEdit(activity)} aria-label="Editar atividade">
                           <Pencil size={13} />
-                        </button>
-                        <button
+                        </IconButton>
+                        <IconButton
+                          className="h-7 w-7"
+                          tone="danger"
                           onClick={() => deleteActivity(activity.id)}
-                          className="rounded-lg p-1 text-slate-300 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40"
                           aria-label="Excluir atividade"
                         >
                           <Trash2 size={13} />
-                        </button>
+                        </IconButton>
                       </div>
                     </div>
                     {activity.description && (
@@ -174,7 +172,7 @@ export function ActivitiesPage() {
 
       {draggingActivity && dragPosition && (
         <div
-          className="pointer-events-none fixed z-50 w-56 max-w-[70vw] -translate-x-1/2 -translate-y-1/2 rotate-3 rounded-xl border border-indigo-300 bg-white p-3.5 shadow-xl dark:border-indigo-500/60 dark:bg-slate-800"
+          className="pointer-events-none fixed z-50 w-56 max-w-[70vw] -translate-x-1/2 -translate-y-1/2 rotate-3 rounded-lg border border-indigo-300 bg-white p-3.5 shadow-pop dark:border-indigo-500/60 dark:bg-slate-800"
           style={{ left: dragPosition.x, top: dragPosition.y }}
         >
           <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{draggingActivity.title}</p>
@@ -196,14 +194,14 @@ export function ActivitiesPage() {
             placeholder="Selecione um ou mais responsáveis"
           />
         </Field>
-        <div className="mt-5 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setModalOpen(false)}>
+        <ModalActions>
+          <Button variant="outline" onClick={() => setModalOpen(false)}>
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={!title.trim() || assigneeIds.length === 0}>
             {editingId ? 'Salvar alterações' : 'Criar atividade'}
           </Button>
-        </div>
+        </ModalActions>
       </Modal>
     </div>
   )

@@ -4,27 +4,29 @@ import { Check, ChevronDown } from 'lucide-react'
 import clsx from 'clsx'
 
 const inputClasses =
-  'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500'
+  'w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-card placeholder:text-slate-400 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500'
 
 interface LabelProps {
   label: string
+  hint?: string
   children: ReactNode
 }
 
 // A plain <div> rather than <label>: wrapping a custom button-based control
 // (Select/MultiSelect) in a <label> makes browsers treat the label text as
 // that control's accessible name instead of its actual selected value.
-export function Field({ label, children }: LabelProps) {
+export function Field({ label, hint, children }: LabelProps) {
   return (
-    <div className="mb-3 block">
-      <span className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">{label}</span>
+    <div className="mb-4 block">
+      <span className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">{label}</span>
       {children}
+      {hint && <span className="mt-1 block text-[11px] text-slate-400">{hint}</span>}
     </div>
   )
 }
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={inputClasses} {...props} />
+export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  return <input className={clsx(inputClasses, className)} {...props} />
 }
 
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -56,7 +58,7 @@ function useDismissableOpen(open: boolean, onDismiss: () => void, containerRef: 
 }
 
 const popoverListClasses =
-  'absolute z-20 mt-1.5 max-h-60 w-full min-w-max max-w-[calc(100vw-2rem)] overflow-auto rounded-xl border border-slate-200 bg-white p-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800'
+  'absolute z-20 mt-1.5 max-h-60 w-full min-w-max max-w-[calc(100vw-2rem)] overflow-auto rounded-lg border border-slate-200 bg-white p-1 text-sm shadow-pop dark:border-slate-700 dark:bg-slate-900'
 
 interface SelectProps {
   value: string
@@ -105,10 +107,10 @@ export function Select({ value, onChange, options, className, placeholder }: Sel
                   setOpen(false)
                 }}
                 className={clsx(
-                  'block w-full truncate rounded-lg px-3 py-2 text-left',
+                  'block w-full truncate rounded-md px-3 py-2 text-left',
                   opt.value === value
                     ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-400'
-                    : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700/60',
+                    : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800',
                 )}
               >
                 {opt.label}
@@ -176,10 +178,10 @@ export function MultiSelect({ values, onChange, options, className, placeholder 
                   aria-selected={checked}
                   onClick={() => toggle(opt.value)}
                   className={clsx(
-                    'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left',
+                    'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left',
                     checked
                       ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-400'
-                      : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700/60',
+                      : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800',
                   )}
                 >
                   <span

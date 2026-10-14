@@ -48,3 +48,33 @@ export interface ActivityRow {
   created_at: string
   completed_at: string | null
 }
+
+export interface FinanceTransactionRow {
+  id: string
+  kind: 'income' | 'expense'
+  description: string
+  category: string
+  amount: number | string
+  date: string
+  due_date: string | null
+  status: 'paid' | 'pending'
+  paid_at: string | null
+  cost_type: 'fixed' | 'variable' | null
+  recurring_id: string | null
+  period: string | null
+  notes: string
+  created_at: string
+}
+
+export interface RecurringCostRow {
+  id: string
+  description: string
+  category: string
+  amount: number | string
+  due_day: number
+  active: boolean
+  start_period: string
+  last_generated_period: string | null
+  notes: string
+  created_at: string
+}

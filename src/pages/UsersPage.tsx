@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Camera, Pencil, Plus, Trash2, UserRound } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { Card, CardContent } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
-import { Modal } from '../components/ui/Modal'
+import { Button, IconButton } from '../components/ui/Button'
+import { Modal, ModalActions } from '../components/ui/Modal'
 import { Field, Input } from '../components/ui/Field'
 import { Avatar } from '../components/ui/Avatar'
+import { PageHeader } from '../components/ui/PageHeader'
 import { uploadAvatar } from '../lib/supabase'
 import { generateId } from '../utils/id'
 import type { TeamMember } from '../types'
@@ -127,18 +128,16 @@ export function UsersPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Usuários</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Gerencie os membros da equipe. Cadastro manual, sem necessidade de conta Google.
-          </p>
-        </div>
-        <Button onClick={openNew}>
-          <Plus size={16} />
-          Novo membro
-        </Button>
-      </div>
+      <PageHeader
+        title="Usuários"
+        description="Gerencie os membros da equipe. Cadastro manual, sem necessidade de conta Google."
+        actions={
+          <Button onClick={openNew}>
+            <Plus size={16} />
+            Novo membro
+          </Button>
+        }
+      />
 
       {users.length === 0 ? (
         <Card>
@@ -164,29 +163,21 @@ export function UsersPage() {
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <button
-                        onClick={() => openEdit(user)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-                        aria-label="Editar"
-                      >
+                      <IconButton onClick={() => openEdit(user)} aria-label="Editar">
                         <Pencil size={15} />
-                      </button>
-                      <button
-                        onClick={() => setConfirmDelete(user)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40"
-                        aria-label="Remover"
-                      >
+                      </IconButton>
+                      <IconButton tone="danger" onClick={() => setConfirmDelete(user)} aria-label="Remover">
                         <Trash2 size={15} />
-                      </button>
+                      </IconButton>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
                     <div>
-                      <p className="text-lg font-bold text-slate-800 dark:text-slate-100">{s.hours.toFixed(1)}h</p>
+                      <p className="text-lg font-semibold tabular-nums tracking-tight text-slate-900 dark:text-white">{s.hours.toFixed(1)}h</p>
                       <p className="text-[11px] text-slate-400">Horas registradas</p>
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-slate-800 dark:text-slate-100">{s.completed}</p>
+                      <p className="text-lg font-semibold tabular-nums tracking-tight text-slate-900 dark:text-white">{s.completed}</p>
                       <p className="text-[11px] text-slate-400">Atividades concluídas</p>
                     </div>
                   </div>
@@ -241,14 +232,14 @@ export function UsersPage() {
         <Field label="Cargo / função">
           <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Ex: Desenvolvedora" />
         </Field>
-        <div className="mt-5 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setModalOpen(false)}>
+        <ModalActions>
+          <Button variant="outline" onClick={() => setModalOpen(false)}>
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={!name.trim() || saving}>
             {saving ? 'Salvando...' : editing ? 'Salvar alterações' : 'Adicionar membro'}
           </Button>
-        </div>
+        </ModalActions>
       </Modal>
 
       <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Remover membro">
@@ -256,8 +247,8 @@ export function UsersPage() {
           Tem certeza que deseja remover <strong>{confirmDelete?.name}</strong>? Todos os registros de ponto e
           atividades associados também serão apagados.
         </p>
-        <div className="mt-5 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setConfirmDelete(null)}>
+        <ModalActions>
+          <Button variant="outline" onClick={() => setConfirmDelete(null)}>
             Cancelar
           </Button>
           <Button
@@ -269,7 +260,7 @@ export function UsersPage() {
           >
             Remover
           </Button>
-        </div>
+        </ModalActions>
       </Modal>
     </div>
   )

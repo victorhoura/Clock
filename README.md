@@ -7,6 +7,7 @@ Aplicativo web para controle de produtividade de equipes pequenas: dashboard ger
 - **Dashboard**: calendário mensal da equipe, gráficos de horas e atividades concluídas por pessoa, ranking de produtividade, status das atividades.
 - **Bater Ponto**: seleção do usuário cadastrado, registro de entrada/saída, histórico de registros por dia.
 - **Atividades**: quadro com atividades pendentes, em andamento e concluídas, atribuídas a membros da equipe.
+- **Financeiro**: faturamento, custos fixos e variáveis, lucro e margem (mensal e anual), contas a pagar e a receber com vencimento, custos fixos recorrentes que geram as contas do mês automaticamente, DRE anual e exportação CSV.
 - **Usuários**: cadastro, edição e remoção manual de membros da equipe.
 - **Tema claro/escuro** com alternância persistida.
 
@@ -17,6 +18,7 @@ Os dados ficam em um banco Supabase (Postgres) compartilhado por toda a equipe, 
 1. Copie `.env.example` para `.env`.
 2. Preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` com os valores do seu projeto Supabase (Project Settings → API).
 3. O schema (tabelas `team_members`, `time_entries`, `activities`) já está criado no projeto Supabase vinculado a este app.
+4. Para o módulo Financeiro, rode `supabase/migrations/20261014_financeiro.sql` uma vez no SQL Editor do Supabase (cria `finance_transactions`, `finance_recurring` e a função que gera as contas dos custos fixos).
 
 ## Rodando localmente
 

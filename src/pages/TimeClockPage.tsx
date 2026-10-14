@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react'
 import { CircleCheck, LogIn, LogOut, Trash2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
+import { Button, IconButton } from '../components/ui/Button'
 import { Select } from '../components/ui/Field'
 import { Avatar } from '../components/ui/Avatar'
+import { PageHeader } from '../components/ui/PageHeader'
 import { entryDurationHours, formatDate, formatHours, formatTime } from '../utils/time'
 
 export function TimeClockPage() {
@@ -34,12 +35,7 @@ export function TimeClockPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white">Bater Ponto</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Selecione seu nome e registre a entrada ou saída do expediente.
-        </p>
-      </div>
+      <PageHeader title="Bater Ponto" description="Selecione seu nome e registre a entrada ou saída do expediente." />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
@@ -60,26 +56,22 @@ export function TimeClockPage() {
                 </div>
 
                 {activeEntry ? (
-                  <div className="w-full rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                  <div className="w-full rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700 ring-1 ring-inset ring-emerald-200/70 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20">
                     Expediente iniciado às <strong>{formatTime(activeEntry.clockIn)}</strong>
                   </div>
                 ) : (
-                  <div className="w-full rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                  <div className="w-full rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-500 ring-1 ring-inset ring-slate-200/70 dark:bg-slate-800/60 dark:text-slate-400 dark:ring-slate-700">
                     Nenhum expediente em andamento
                   </div>
                 )}
 
                 {activeEntry ? (
-                  <Button
-                    variant="danger"
-                    className="w-full"
-                    onClick={() => clockOut(selectedUser.id)}
-                  >
+                  <Button variant="danger" className="h-11 w-full" onClick={() => clockOut(selectedUser.id)}>
                     <LogOut size={16} />
                     Registrar saída
                   </Button>
                 ) : (
-                  <Button className="w-full" onClick={() => clockIn(selectedUser.id)}>
+                  <Button className="h-11 w-full" onClick={() => clockIn(selectedUser.id)}>
                     <LogIn size={16} />
                     Registrar entrada
                   </Button>
@@ -99,7 +91,7 @@ export function TimeClockPage() {
               return (
                 <div
                   key={user.id}
-                  className="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5 dark:border-slate-800"
+                  className="flex items-center gap-3 rounded-lg border border-slate-100 px-3 py-2.5 dark:border-slate-800"
                 >
                   <Avatar user={user} size={36} />
                   <div className="min-w-0 flex-1">
@@ -130,7 +122,7 @@ export function TimeClockPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400 dark:border-slate-800">
+                  <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:text-slate-400">
                     <th className="py-2 pr-4 font-medium">Membro</th>
                     <th className="py-2 pr-4 font-medium">Data</th>
                     <th className="py-2 pr-4 font-medium">Entrada</th>
@@ -163,17 +155,13 @@ export function TimeClockPage() {
                             <span className="text-emerald-600 dark:text-emerald-400">Em andamento</span>
                           )}
                         </td>
-                        <td className="py-2.5 pr-4 font-medium text-slate-700 dark:text-slate-200">
+                        <td className="py-2.5 pr-4 font-medium tabular-nums text-slate-700 dark:text-slate-200">
                           {entry.clockOut ? formatHours(entryDurationHours(entry)) : '—'}
                         </td>
                         <td className="py-2.5 pr-2 text-right">
-                          <button
-                            onClick={() => deleteTimeEntry(entry.id)}
-                            className="rounded-lg p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40"
-                            aria-label="Excluir registro"
-                          >
+                          <IconButton tone="danger" onClick={() => deleteTimeEntry(entry.id)} aria-label="Excluir registro">
                             <Trash2 size={14} />
-                          </button>
+                          </IconButton>
                         </td>
                       </tr>
                     )

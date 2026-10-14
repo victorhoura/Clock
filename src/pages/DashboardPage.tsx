@@ -2,49 +2,20 @@ import { useMemo } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { CheckCircle2, Clock, ListTodo, Users } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card'
+import { KpiCard } from '../components/ui/KpiCard'
+import { PageHeader } from '../components/ui/PageHeader'
+import { useChartTheme } from '../hooks/useChartTheme'
 import { TeamCalendar } from '../components/TeamCalendar'
 import { Avatar } from '../components/ui/Avatar'
 import { dailyTeamHours, hoursInRange, hoursPerUser, lastNDays } from '../utils/stats'
 import { formatDate, formatHours } from '../utils/time'
 import type { Activity, TeamMember } from '../types'
 
-const AXIS_COLOR = '#94a3b8'
 const STATUS_COLORS: Record<string, string> = {
   Pendente: '#cbd5e1',
   'Em andamento': '#f59e0b',
   Concluída: '#10b981',
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  tint,
-  accent,
-}: {
-  icon: typeof Clock
-  label: string
-  value: string
-  sub: string
-  tint: string
-  accent: string
-}) {
-  return (
-    <Card className={`border-t-4 ${accent}`}>
-      <CardContent className="flex items-start gap-3.5">
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tint}`}>
-          <Icon size={20} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-xl font-bold leading-tight text-slate-900 dark:text-white">{value}</p>
-          <p className="mt-0.5 text-xs leading-snug text-slate-500 dark:text-slate-400">{label}</p>
-          <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{sub}</p>
-        </div>
-      </CardContent>
-    </Card>
-  )
 }
 
 function ActivityListCard({
@@ -61,10 +32,13 @@ function ActivityListCard({
   accent: string
 }) {
   return (
-    <Card className={`border-t-4 ${accent}`}>
+    <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+        <CardTitle className="flex items-center gap-2">
+          <span className={`h-2 w-2 rounded-full ${accent}`} />
+          {title}
+        </CardTitle>
+        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500 dark:bg-slate-800 dark:text-slate-400">
           {activities.length}
         </span>
       </CardHeader>
@@ -75,7 +49,7 @@ function ActivityListCard({
           return (
             <div
               key={activity.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5 dark:border-slate-800"
+              className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2.5 transition-colors hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/30"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{activity.title}</p>
@@ -83,7 +57,7 @@ function ActivityListCard({
               </div>
               <div className="flex shrink-0 -space-x-1.5">
                 {assignees.map((u) => (
-                  <div key={u.id} title={u.name} className="ring-2 ring-white dark:ring-slate-900">
+                  <div key={u.id} title={u.name} className="ring-2 ring-white dark:ring-surface-dark">
                     <Avatar user={u} size={24} />
                   </div>
                 ))}
@@ -97,19 +71,12 @@ function ActivityListCard({
 }
 
 export function DashboardPage() {
-  const { users, timeEntries, activities, theme } = useApp()
-  const gridColor = theme === 'dark' ? '#334155' : '#e2e8f0'
-  const tooltipTextColor = theme === 'dark' ? '#e2e8f0' : '#1e293b'
-  const tooltipStyle = {
-    borderRadius: 12,
-    border: `1px solid ${theme === 'dark' ? '#334155' : '#e2e8f0'}`,
-    background: theme === 'dark' ? '#1e293b' : '#ffffff',
-    color: tooltipTextColor,
-    fontSize: 12,
-  }
-  // Recharts colors the value line with the series' own color by default
-  // (e.g. the bar's indigo), which reads poorly against a dark tooltip.
-  const tooltipItemStyle = { color: tooltipTextColor }
+  const { users, timeEntries, activities } = useApp()
+  const chart = useChartTheme()
+  const gridColor = chart.gridColor
+  const AXIS_COLOR = chart.axisColor
+  const tooltipStyle = chart.tooltipStyle
+  const tooltipItemStyle = chart.tooltipItemStyle
 
   const days14 = useMemo(() => lastNDays(14), [])
   const days7 = useMemo(() => lastNDays(7), [])
@@ -175,43 +142,36 @@ export function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Visão geral da produtividade da equipe.</p>
-      </div>
+      <PageHeader title="Dashboard" description="Visão geral da produtividade da equipe." />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
+        <KpiCard
           icon={Clock}
-          label="Horas nos últimos 7 dias"
+          label="Horas (7 dias)"
           value={formatHours(weekHours)}
-          sub={`${formatHours(allTimeHours)} total`}
-          tint="bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
-          accent="border-t-indigo-400 dark:border-t-indigo-500"
+          sub={`${formatHours(allTimeHours)} no total`}
+          tone="indigo"
         />
-        <StatCard
+        <KpiCard
           icon={CheckCircle2}
-          label="Atividades concluídas (7 dias)"
+          label="Concluídas (7 dias)"
           value={String(completedThisWeek)}
           sub={`${totalCompleted} no total`}
-          tint="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
-          accent="border-t-emerald-400 dark:border-t-emerald-500"
+          tone="emerald"
         />
-        <StatCard
+        <KpiCard
           icon={Users}
           label="Membros da equipe"
           value={String(users.length)}
           sub={`${activeNow} trabalhando agora`}
-          tint="bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
-          accent="border-t-amber-400 dark:border-t-amber-500"
+          tone="amber"
         />
-        <StatCard
+        <KpiCard
           icon={ListTodo}
           label="Atividades em aberto"
           value={String(activities.filter((a) => a.status !== 'completed').length)}
           sub={`${activities.length} criadas`}
-          tint="bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
-          accent="border-t-rose-400 dark:border-t-rose-500"
+          tone="rose"
         />
       </div>
 
@@ -227,13 +187,16 @@ export function DashboardPage() {
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Produtividade</CardTitle>
+            <div>
+              <CardTitle>Ranking de produtividade</CardTitle>
+              <CardDescription>Horas registradas e atividades concluídas</CardDescription>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 pt-4">
             {ranking.length === 0 && <p className="py-8 text-center text-xs text-slate-400">Sem dados ainda.</p>}
             {ranking.map((r, i) => (
               <div key={r.user.id} className="flex items-center gap-3">
-                <span className="w-4 text-xs font-semibold text-slate-400">{i + 1}</span>
+                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold tabular-nums ${i === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>{i + 1}</span>
                 <Avatar user={r.user} size={32} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{r.user.name}</p>
@@ -251,11 +214,11 @@ export function DashboardPage() {
           <CardContent className="h-72 pt-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={hoursByUser} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                <CartesianGrid stroke={gridColor} vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: AXIS_COLOR, fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: AXIS_COLOR, fontSize: 12 }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  cursor={{ fill: 'rgba(99,102,241,0.08)' }}
+                  cursor={{ fill: chart.cursorFill }}
                   contentStyle={tooltipStyle}
                   itemStyle={tooltipItemStyle}
                   formatter={(value) => [formatHours(Number(value)), 'Horas']}
@@ -277,14 +240,14 @@ export function DashboardPage() {
           activities={pendingActivities}
           userMap={userMap}
           emptyMessage="Nenhuma atividade pendente. 🎉"
-          accent="border-t-slate-300 dark:border-t-slate-600"
+          accent="bg-slate-400"
         />
         <ActivityListCard
           title="Atividades em andamento"
           activities={inProgressActivities}
           userMap={userMap}
           emptyMessage="Nenhuma atividade em andamento."
-          accent="border-t-amber-400"
+          accent="bg-amber-400"
         />
       </div>
 
@@ -296,7 +259,7 @@ export function DashboardPage() {
           <CardContent className="h-64 pt-0">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={dailyHours} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                <CartesianGrid stroke={gridColor} vertical={false} />
                 <XAxis
                   dataKey="date"
                   tick={{ fill: AXIS_COLOR, fontSize: 11 }}
