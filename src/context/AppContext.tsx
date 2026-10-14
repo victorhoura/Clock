@@ -1,6 +1,22 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  addDoc,
+  arrayRemove,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+  query,
+  setDoc,
+  updateDoc,
+  where,
+  writeBatch,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+} from 'firebase/firestore'
 import type { Activity, ActivityStatus, TeamMember, Theme, TimeEntry } from '../types'
-import { supabase, type ActivityRow, type TeamMemberRow, type TimeEntryRow } from '../lib/supabase'
+import { COLLECTIONS, db } from '../lib/firebase'
 import { todayISODate } from '../utils/time'
 
 const THEME_KEY = 'team-productivity-theme'
@@ -23,30 +39,33 @@ function nextMemberColor(users: TeamMember[]): string {
   }, MEMBER_COLORS[0])
 }
 
-function fromMemberRow(row: TeamMemberRow): TeamMember {
+function fromMemberDoc(d: QueryDocumentSnapshot<DocumentData>): TeamMember {
+  const data = d.data()
   return {
-    id: row.id,
-    name: row.name,
-    role: row.role,
-    color: row.color,
-    avatarUrl: row.avatar_url,
-    createdAt: row.created_at,
+    id: d.id,
+    name: data.name ?? '',
+    role: data.role ?? '',
+    color: data.color ?? MEMBER_COLORS[0],
+    avatarUrl: data.avatarUrl ?? null,
+    createdAt: data.createdAt ?? '',
   }
 }
 
-function fromEntryRow(row: TimeEntryRow): TimeEntry {
-  return { id: row.id, userId: row.user_id, date: row.date, clockIn: row.clock_in, clockOut: row.clock_out }
+function fromEntryDoc(d: QueryDocumentSnapshot<DocumentData>): TimeEntry {
+  const data = d.data()
+  return { id: d.id, userId: data.userId, date: data.date, clockIn: data.clockIn, clockOut: data.clockOut ?? null }
 }
 
-function fromActivityRow(row: ActivityRow): Activity {
+function fromActivityDoc(d: QueryDocumentSnapshot<DocumentData>): Activity {
+  const data = d.data()
   return {
-    id: row.id,
-    assigneeIds: row.assignee_ids ?? [],
-    title: row.title,
-    description: row.description,
-    status: row.status,
-    createdAt: row.created_at,
-    completedAt: row.completed_at,
+    id: d.id,
+    assigneeIds: data.assigneeIds ?? [],
+    title: data.title ?? '',
+    description: data.description ?? '',
+    status: data.status ?? 'pending',
+    createdAt: data.createdAt ?? '',
+    completedAt: data.completedAt ?? null,
   }
 }
 
@@ -100,85 +119,73 @@ export function AppProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
+  // One live listener per collection: the first snapshot is the initial load,
+  // later ones carry changes made on any device.
   useEffect(() => {
-    let cancelled = false
-
-    async function loadAll() {
-      const [membersRes, entriesRes, activitiesRes] = await Promise.all([
-        supabase.from('team_members').select('*').order('created_at', { ascending: true }),
-        supabase.from('time_entries').select('*').order('clock_in', { ascending: false }),
-        supabase.from('activities').select('*').order('created_at', { ascending: false }),
-      ])
-      if (cancelled) return
-      if (membersRes.data) setUsers(membersRes.data.map(fromMemberRow))
-      if (entriesRes.data) setTimeEntries(entriesRes.data.map(fromEntryRow))
-      if (activitiesRes.data) setActivities(activitiesRes.data.map(fromActivityRow))
-      setLoading(false)
+    const pending = new Set(['members', 'entries', 'activities'])
+    const settle = (key: string) => {
+      pending.delete(key)
+      if (pending.size === 0) setLoading(false)
     }
 
-    loadAll()
-
-    const channel = supabase
-      .channel('pulse-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, (payload) => {
-        if (payload.eventType === 'DELETE') {
-          setUsers((prev) => prev.filter((u) => u.id !== (payload.old as TeamMemberRow).id))
-        } else {
-          const row = fromMemberRow(payload.new as TeamMemberRow)
-          setUsers((prev) => {
-            const exists = prev.some((u) => u.id === row.id)
-            return exists ? prev.map((u) => (u.id === row.id ? row : u)) : [...prev, row]
-          })
-        }
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'time_entries' }, (payload) => {
-        if (payload.eventType === 'DELETE') {
-          setTimeEntries((prev) => prev.filter((e) => e.id !== (payload.old as TimeEntryRow).id))
-        } else {
-          const row = fromEntryRow(payload.new as TimeEntryRow)
-          setTimeEntries((prev) => {
-            const exists = prev.some((e) => e.id === row.id)
-            return exists ? prev.map((e) => (e.id === row.id ? row : e)) : [row, ...prev]
-          })
-        }
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'activities' }, (payload) => {
-        if (payload.eventType === 'DELETE') {
-          setActivities((prev) => prev.filter((a) => a.id !== (payload.old as ActivityRow).id))
-        } else {
-          const row = fromActivityRow(payload.new as ActivityRow)
-          setActivities((prev) => {
-            const exists = prev.some((a) => a.id === row.id)
-            return exists ? prev.map((a) => (a.id === row.id ? row : a)) : [row, ...prev]
-          })
-        }
-      })
-      .subscribe()
-
-    return () => {
-      cancelled = true
-      supabase.removeChannel(channel)
-    }
+    const unsubs = [
+      onSnapshot(
+        collection(db, COLLECTIONS.members),
+        (snap) => {
+          setUsers(snap.docs.map(fromMemberDoc).sort((a, b) => a.createdAt.localeCompare(b.createdAt)))
+          settle('members')
+        },
+        () => settle('members'),
+      ),
+      onSnapshot(
+        collection(db, COLLECTIONS.timeEntries),
+        (snap) => {
+          setTimeEntries(snap.docs.map(fromEntryDoc).sort((a, b) => b.clockIn.localeCompare(a.clockIn)))
+          settle('entries')
+        },
+        () => settle('entries'),
+      ),
+      onSnapshot(
+        collection(db, COLLECTIONS.activities),
+        (snap) => {
+          setActivities(snap.docs.map(fromActivityDoc).sort((a, b) => b.createdAt.localeCompare(a.createdAt)))
+          settle('activities')
+        },
+        () => settle('activities'),
+      ),
+    ]
+    return () => unsubs.forEach((u) => u())
   }, [])
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
   const addUser = async (id: string, name: string, role: string, avatarUrl: string | null) => {
     const color = nextMemberColor(users)
-    await supabase
-      .from('team_members')
-      .insert({ id, name: name.trim(), role: role.trim(), color, avatar_url: avatarUrl })
+    await setDoc(doc(db, COLLECTIONS.members, id), {
+      name: name.trim(),
+      role: role.trim(),
+      color,
+      avatarUrl,
+      createdAt: new Date().toISOString(),
+    })
   }
 
   const updateUser: AppContextValue['updateUser'] = async (id, updates) => {
-    const { avatarUrl, ...rest } = updates
-    const payload: Record<string, unknown> = { ...rest }
-    if (avatarUrl !== undefined) payload.avatar_url = avatarUrl
-    await supabase.from('team_members').update(payload).eq('id', id)
+    await updateDoc(doc(db, COLLECTIONS.members, id), { ...updates })
   }
 
+  // Removing a member also deletes their time entries and takes them off the
+  // activities they were assigned to.
   const removeUser = async (id: string) => {
-    await supabase.from('team_members').delete().eq('id', id)
+    const [entries, assigned] = await Promise.all([
+      getDocs(query(collection(db, COLLECTIONS.timeEntries), where('userId', '==', id))),
+      getDocs(query(collection(db, COLLECTIONS.activities), where('assigneeIds', 'array-contains', id))),
+    ])
+    const batch = writeBatch(db)
+    entries.docs.forEach((d) => batch.delete(d.ref))
+    assigned.docs.forEach((d) => batch.update(d.ref, { assigneeIds: arrayRemove(id) }))
+    batch.delete(doc(db, COLLECTIONS.members, id))
+    await batch.commit()
   }
 
   const activeEntryForUser = (userId: string) =>
@@ -186,49 +193,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const clockIn = async (userId: string) => {
     if (activeEntryForUser(userId)) return
-    await supabase.from('time_entries').insert({
-      user_id: userId,
+    await addDoc(collection(db, COLLECTIONS.timeEntries), {
+      userId,
       date: todayISODate(),
-      clock_in: new Date().toISOString(),
-      clock_out: null,
+      clockIn: new Date().toISOString(),
+      clockOut: null,
     })
   }
 
   const clockOut = async (userId: string) => {
     const entry = activeEntryForUser(userId)
     if (!entry) return
-    await supabase.from('time_entries').update({ clock_out: new Date().toISOString() }).eq('id', entry.id)
+    await updateDoc(doc(db, COLLECTIONS.timeEntries, entry.id), { clockOut: new Date().toISOString() })
   }
 
   const deleteTimeEntry = async (id: string) => {
-    await supabase.from('time_entries').delete().eq('id', id)
+    await deleteDoc(doc(db, COLLECTIONS.timeEntries, id))
   }
 
   const addActivity = async (assigneeIds: string[], title: string, description: string) => {
-    await supabase.from('activities').insert({
-      assignee_ids: assigneeIds,
+    await addDoc(collection(db, COLLECTIONS.activities), {
+      assigneeIds,
       title: title.trim(),
       description: description.trim(),
       status: 'pending',
+      createdAt: new Date().toISOString(),
+      completedAt: null,
     })
   }
 
   const updateActivity = async (id: string, assigneeIds: string[], title: string, description: string) => {
-    await supabase
-      .from('activities')
-      .update({ assignee_ids: assigneeIds, title: title.trim(), description: description.trim() })
-      .eq('id', id)
+    await updateDoc(doc(db, COLLECTIONS.activities, id), {
+      assigneeIds,
+      title: title.trim(),
+      description: description.trim(),
+    })
   }
 
   const updateActivityStatus = async (id: string, status: ActivityStatus) => {
-    await supabase
-      .from('activities')
-      .update({ status, completed_at: status === 'completed' ? new Date().toISOString() : null })
-      .eq('id', id)
+    await updateDoc(doc(db, COLLECTIONS.activities, id), {
+      status,
+      completedAt: status === 'completed' ? new Date().toISOString() : null,
+    })
   }
 
   const deleteActivity = async (id: string) => {
-    await supabase.from('activities').delete().eq('id', id)
+    await deleteDoc(doc(db, COLLECTIONS.activities, id))
   }
 
   const value = useMemo<AppContextValue>(

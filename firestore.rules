@@ -1,0 +1,18 @@
+rules_version = '2';
+
+// O app não tem login: cada pessoa escolhe o próprio nome. Por isso as
+// coleções do app ficam abertas para leitura e escrita, e todo o resto do
+// banco fica fechado. Cole este conteúdo em Firestore → Regras → Publicar.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{collection}/{docId} {
+      allow read, write: if collection in [
+        'team_members',
+        'time_entries',
+        'activities',
+        'finance_transactions',
+        'finance_recurring'
+      ];
+    }
+  }
+}

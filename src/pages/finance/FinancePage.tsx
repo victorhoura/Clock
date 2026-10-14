@@ -76,16 +76,6 @@ function FinanceContent() {
         </div>
       )}
 
-      {state === 'missing-schema' && (
-        <Card>
-          <EmptyState
-            icon={Database}
-            title="Configure o banco de dados do Financeiro"
-            description="As tabelas do módulo financeiro ainda não existem no Supabase. Rode o arquivo supabase/migrations/20261014_financeiro.sql no SQL Editor do projeto e recarregue a página."
-          />
-        </Card>
-      )}
-
       {state === 'error' && (
         <Card>
           <EmptyState

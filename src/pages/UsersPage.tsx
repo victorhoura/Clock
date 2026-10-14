@@ -7,7 +7,7 @@ import { Modal, ModalActions } from '../components/ui/Modal'
 import { Field, Input } from '../components/ui/Field'
 import { Avatar } from '../components/ui/Avatar'
 import { PageHeader } from '../components/ui/PageHeader'
-import { uploadAvatar } from '../lib/supabase'
+import { avatarToDataUrl } from '../lib/firebase'
 import { generateId } from '../utils/id'
 import type { TeamMember } from '../types'
 import { entryDurationHours } from '../utils/time'
@@ -108,14 +108,14 @@ export function UsersPage() {
       if (editing) {
         const updates: Parameters<typeof updateUser>[1] = { name: name.trim(), role: role.trim() }
         if (avatarFile) {
-          updates.avatarUrl = await uploadAvatar(editing.id, avatarFile)
+          updates.avatarUrl = await avatarToDataUrl(avatarFile)
         } else if (removeAvatar) {
           updates.avatarUrl = null
         }
         await updateUser(editing.id, updates)
       } else {
         const id = generateId()
-        const avatarUrl = avatarFile ? await uploadAvatar(id, avatarFile) : null
+        const avatarUrl = avatarFile ? await avatarToDataUrl(avatarFile) : null
         await addUser(id, name, role, avatarUrl)
       }
       setModalOpen(false)

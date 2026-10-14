@@ -1,39 +1,56 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+  query,
+  runTransaction,
+  updateDoc,
+  where,
+  writeBatch,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+} from 'firebase/firestore'
 import type { CostType, FinanceTransaction, RecurringCost, TransactionKind, TransactionStatus } from '../types'
-import { supabase, type FinanceTransactionRow, type RecurringCostRow } from '../lib/supabase'
+import { COLLECTIONS, db } from '../lib/firebase'
 import { todayISODate } from '../utils/time'
-import { currentPeriod, periodStartISO, recurringDueDate, shiftPeriod } from '../utils/finance'
+import { currentPeriod, periodStartISO, recurringDueDate, shiftPeriod, type Period } from '../utils/finance'
 
-function fromTransactionRow(row: FinanceTransactionRow): FinanceTransaction {
+function fromTransactionDoc(d: QueryDocumentSnapshot<DocumentData>): FinanceTransaction {
+  const data = d.data()
   return {
-    id: row.id,
-    kind: row.kind,
-    description: row.description,
-    category: row.category,
-    amount: Number(row.amount),
-    date: row.date,
-    dueDate: row.due_date,
-    status: row.status,
-    paidAt: row.paid_at,
-    costType: row.cost_type,
-    recurringId: row.recurring_id,
-    period: row.period,
-    notes: row.notes ?? '',
-    createdAt: row.created_at,
+    id: d.id,
+    kind: data.kind,
+    description: data.description ?? '',
+    category: data.category ?? 'Outros',
+    amount: Number(data.amount) || 0,
+    date: data.date,
+    dueDate: data.dueDate ?? null,
+    status: data.status ?? 'paid',
+    paidAt: data.paidAt ?? null,
+    costType: data.costType ?? null,
+    recurringId: data.recurringId ?? null,
+    period: data.period ?? null,
+    notes: data.notes ?? '',
+    createdAt: data.createdAt ?? '',
   }
 }
 
-function fromRecurringRow(row: RecurringCostRow): RecurringCost {
+function fromRecurringDoc(d: QueryDocumentSnapshot<DocumentData>): RecurringCost {
+  const data = d.data()
   return {
-    id: row.id,
-    description: row.description,
-    category: row.category,
-    amount: Number(row.amount),
-    dueDay: row.due_day,
-    active: row.active,
-    startPeriod: row.start_period,
-    notes: row.notes ?? '',
-    createdAt: row.created_at,
+    id: d.id,
+    description: data.description ?? '',
+    category: data.category ?? 'Outros',
+    amount: Number(data.amount) || 0,
+    dueDay: data.dueDay ?? 1,
+    active: data.active ?? true,
+    startPeriod: data.startPeriod,
+    notes: data.notes ?? '',
+    createdAt: data.createdAt ?? '',
   }
 }
 
@@ -57,8 +74,7 @@ export interface RecurringInput {
   notes: string
 }
 
-// 'missing-schema' means the finance tables were not created in Supabase yet.
-type LoadState = 'loading' | 'ready' | 'missing-schema' | 'error'
+type LoadState = 'loading' | 'ready' | 'error'
 
 interface FinanceContextValue {
   state: LoadState
@@ -76,23 +92,7 @@ interface FinanceContextValue {
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
 
-function isMissingTable(error: { code?: string; message?: string } | null): boolean {
-  if (!error) return false
-  return error.code === '42P01' || error.code === 'PGRST205' || /does not exist|could not find the table/i.test(error.message ?? '')
-}
-
-// Supabase reports failures in the result instead of throwing; callers (the
-// modals) rely on a throw to keep the form open and show an error.
-function must<T extends { error: unknown }>(res: T): T {
-  if (res.error) throw res.error
-  return res
-}
-
-function upsertById<T extends { id: string }>(list: T[], row: T): T[] {
-  return list.some((x) => x.id === row.id) ? list.map((x) => (x.id === row.id ? row : x)) : [row, ...list]
-}
-
-function toRowPayload(input: TransactionInput) {
+function toDocFields(input: TransactionInput) {
   const paid = input.status === 'paid'
   // An entry recorded as already settled is dated by its due/competência date, never in the future.
   const settledOn = input.dueDate ?? input.date
@@ -102,11 +102,70 @@ function toRowPayload(input: TransactionInput) {
     category: input.category,
     amount: input.amount,
     date: input.date,
-    due_date: input.dueDate,
+    dueDate: input.dueDate,
     status: input.status,
-    paid_at: paid ? (settledOn < todayISODate() ? settledOn : todayISODate()) : null,
-    cost_type: input.kind === 'expense' ? (input.costType ?? 'variable') : null,
+    paidAt: paid ? (settledOn < todayISODate() ? settledOn : todayISODate()) : null,
+    costType: input.kind === 'expense' ? (input.costType ?? 'variable') : null,
     notes: input.notes.trim(),
+  }
+}
+
+function toPeriod(iso: string): Period {
+  const [year, month] = iso.split('-').map(Number)
+  return { year, month: month - 1 }
+}
+
+/** Months (as YYYY-MM-01) from `from` through `to`, inclusive. */
+function periodsBetween(from: string, to: string): string[] {
+  const out: string[] = []
+  for (let p = toPeriod(from); periodStartISO(p) <= to; p = shiftPeriod(p, 1)) out.push(periodStartISO(p))
+  return out
+}
+
+// A fixed cost's bill for a month always has the same id, so generating it
+// twice (two devices opening the app at once) lands on the same document
+// instead of creating a duplicate.
+const billId = (recurringId: string, period: string) => `${recurringId}_${period.slice(0, 7)}`
+
+/**
+ * Creates this month's bill (and any missed months) for every active fixed
+ * cost. `lastGeneratedPeriod` remembers where each one stopped, so a bill that
+ * was deleted by hand is not recreated.
+ */
+async function generateRecurringBills() {
+  const until = periodStartISO(currentPeriod())
+  const snap = await getDocs(query(collection(db, COLLECTIONS.recurring), where('active', '==', true)))
+  for (const recDoc of snap.docs) {
+    await runTransaction(db, async (tx) => {
+      const r = (await tx.get(recDoc.ref)).data()
+      if (!r || !r.active) return
+      const last: string | null = r.lastGeneratedPeriod ?? null
+      if (last && last >= until) return
+      const next = last ? periodStartISO(shiftPeriod(toPeriod(last), 1)) : r.startPeriod
+      const periods = periodsBetween(next > r.startPeriod ? next : r.startPeriod, until)
+      const refs = periods.map((p) => doc(db, COLLECTIONS.transactions, billId(recDoc.id, p)))
+      const existing = await Promise.all(refs.map((ref) => tx.get(ref)))
+      periods.forEach((p, i) => {
+        if (existing[i].exists()) return
+        const due = recurringDueDate(r.dueDay, p)
+        tx.set(refs[i], {
+          kind: 'expense',
+          description: r.description,
+          category: r.category,
+          amount: r.amount,
+          date: due,
+          dueDate: due,
+          status: 'pending',
+          paidAt: null,
+          costType: 'fixed',
+          recurringId: recDoc.id,
+          period: p,
+          notes: '',
+          createdAt: new Date().toISOString(),
+        })
+      })
+      tx.update(recDoc.ref, { lastGeneratedPeriod: until })
+    })
   }
 }
 
@@ -114,184 +173,137 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<LoadState>('loading')
   const [transactions, setTransactions] = useState<FinanceTransaction[]>([])
   const [recurring, setRecurring] = useState<RecurringCost[]>([])
-
-  const generateRecurring = useCallback(async () => {
-    await supabase.rpc('finance_generate_recurring', { p_until: periodStartISO(currentPeriod()) })
-  }, [])
-
-  const loadAll = useCallback(async () => {
-    const [txRes, recRes] = await Promise.all([
-      supabase.from('finance_transactions').select('*').order('date', { ascending: false }),
-      supabase.from('finance_recurring').select('*').order('created_at', { ascending: true }),
-    ])
-    if (isMissingTable(txRes.error) || isMissingTable(recRes.error)) {
-      setState('missing-schema')
-      return
-    }
-    if (txRes.error || recRes.error) {
-      setState('error')
-      return
-    }
-    setTransactions((txRes.data as FinanceTransactionRow[]).map(fromTransactionRow))
-    setRecurring((recRes.data as RecurringCostRow[]).map(fromRecurringRow))
-    setState('ready')
-  }, [])
+  const transactionsRef = useRef(transactions)
 
   useEffect(() => {
-    let cancelled = false
+    transactionsRef.current = transactions
+  }, [transactions])
 
-    // Materialize this month's fixed-cost bills before the first read, so they show up right away.
-    generateRecurring().finally(() => {
-      if (!cancelled) loadAll()
-    })
-
-    const channel = supabase
-      .channel('finance-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_transactions' }, (payload) => {
-        if (payload.eventType === 'DELETE') {
-          setTransactions((prev) => prev.filter((t) => t.id !== (payload.old as FinanceTransactionRow).id))
-        } else {
-          setTransactions((prev) => upsertById(prev, fromTransactionRow(payload.new as FinanceTransactionRow)))
-        }
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_recurring' }, (payload) => {
-        if (payload.eventType === 'DELETE') {
-          setRecurring((prev) => prev.filter((r) => r.id !== (payload.old as RecurringCostRow).id))
-        } else {
-          const row = fromRecurringRow(payload.new as RecurringCostRow)
-          setRecurring((prev) =>
-            prev.some((r) => r.id === row.id) ? prev.map((r) => (r.id === row.id ? row : r)) : [...prev, row],
-          )
-        }
-      })
-      .subscribe()
-
-    return () => {
-      cancelled = true
-      supabase.removeChannel(channel)
+  // Live listeners: the first snapshot is the initial load, later ones carry
+  // changes made on any device.
+  useEffect(() => {
+    const pending = new Set(['transactions', 'recurring'])
+    const settle = (key: string) => {
+      pending.delete(key)
+      if (pending.size === 0) setState((s) => (s === 'loading' ? 'ready' : s))
     }
-  }, [generateRecurring, loadAll])
+    const fail = () => setState('error')
 
-  // Writes apply the returned row locally as well, so the screen updates even
-  // if the realtime publication is slow or not configured.
+    // Materialize this month's fixed-cost bills; the listeners pick them up.
+    generateRecurringBills().catch(() => {})
+
+    const unsubs = [
+      onSnapshot(
+        collection(db, COLLECTIONS.transactions),
+        (snap) => {
+          setTransactions(
+            snap.docs
+              .map(fromTransactionDoc)
+              .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)),
+          )
+          settle('transactions')
+        },
+        fail,
+      ),
+      onSnapshot(
+        collection(db, COLLECTIONS.recurring),
+        (snap) => {
+          setRecurring(snap.docs.map(fromRecurringDoc).sort((a, b) => a.createdAt.localeCompare(b.createdAt)))
+          settle('recurring')
+        },
+        fail,
+      ),
+    ]
+    return () => unsubs.forEach((u) => u())
+  }, [])
+
   const addTransaction = useCallback(async (input: TransactionInput) => {
-    const { data } = must(await supabase.from('finance_transactions').insert(toRowPayload(input)).select().single())
-    if (data) setTransactions((prev) => upsertById(prev, fromTransactionRow(data as FinanceTransactionRow)))
+    await addDoc(collection(db, COLLECTIONS.transactions), {
+      ...toDocFields(input),
+      recurringId: null,
+      period: null,
+      createdAt: new Date().toISOString(),
+    })
   }, [])
 
   const updateTransaction = useCallback(async (id: string, input: TransactionInput) => {
-    const { data } = must(
-      await supabase.from('finance_transactions').update(toRowPayload(input)).eq('id', id).select().single(),
-    )
-    if (data) setTransactions((prev) => upsertById(prev, fromTransactionRow(data as FinanceTransactionRow)))
+    await updateDoc(doc(db, COLLECTIONS.transactions, id), toDocFields(input))
   }, [])
 
   const deleteTransaction = useCallback(async (id: string) => {
-    must(await supabase.from('finance_transactions').delete().eq('id', id))
-    setTransactions((prev) => prev.filter((t) => t.id !== id))
+    await deleteDoc(doc(db, COLLECTIONS.transactions, id))
   }, [])
 
   const setPaid = useCallback(async (id: string, paid: boolean) => {
-    const { data } = must(
-      await supabase
-        .from('finance_transactions')
-        .update({ status: paid ? 'paid' : 'pending', paid_at: paid ? todayISODate() : null })
-        .eq('id', id)
-        .select()
-        .single(),
-    )
-    if (data) setTransactions((prev) => upsertById(prev, fromTransactionRow(data as FinanceTransactionRow)))
+    await updateDoc(doc(db, COLLECTIONS.transactions, id), {
+      status: paid ? 'paid' : 'pending',
+      paidAt: paid ? todayISODate() : null,
+    })
   }, [])
 
-  const addRecurring = useCallback(
-    async (input: RecurringInput) => {
-      must(
-        await supabase.from('finance_recurring').insert({
-          description: input.description.trim(),
-          category: input.category,
-          amount: input.amount,
-          due_day: input.dueDay,
-          notes: input.notes.trim(),
-          start_period: periodStartISO(currentPeriod()),
-        }),
-      )
-      await generateRecurring()
-      await loadAll()
-    },
-    [generateRecurring, loadAll],
-  )
+  const addRecurring = useCallback(async (input: RecurringInput) => {
+    await addDoc(collection(db, COLLECTIONS.recurring), {
+      description: input.description.trim(),
+      category: input.category,
+      amount: input.amount,
+      dueDay: input.dueDay,
+      notes: input.notes.trim(),
+      active: true,
+      startPeriod: periodStartISO(currentPeriod()),
+      lastGeneratedPeriod: null,
+      createdAt: new Date().toISOString(),
+    })
+    await generateRecurringBills()
+  }, [])
 
   // Editing a fixed cost also updates its bills that are still open from this
   // month on; bills already paid keep the value they were paid with.
-  const updateRecurring = useCallback(
-    async (id: string, input: RecurringInput) => {
-      must(
-        await supabase
-          .from('finance_recurring')
-          .update({
-            description: input.description.trim(),
-            category: input.category,
-            amount: input.amount,
-            due_day: input.dueDay,
-            notes: input.notes.trim(),
-          })
-          .eq('id', id),
-      )
-      const fromPeriod = periodStartISO(currentPeriod())
-      const open = transactions.filter(
-        (t) => t.recurringId === id && t.status === 'pending' && t.period && t.period >= fromPeriod,
-      )
-      const results = await Promise.all(
-        open.map((t) => {
-          const due = recurringDueDate(input.dueDay, t.period!)
-          return supabase
-            .from('finance_transactions')
-            .update({
-              description: input.description.trim(),
-              category: input.category,
-              amount: input.amount,
-              date: due,
-              due_date: due,
-            })
-            .eq('id', t.id)
-        }),
-      )
-      results.forEach(must)
-      await loadAll()
-    },
-    [transactions, loadAll],
-  )
+  const updateRecurring = useCallback(async (id: string, input: RecurringInput) => {
+    const fromPeriod = periodStartISO(currentPeriod())
+    const batch = writeBatch(db)
+    batch.update(doc(db, COLLECTIONS.recurring, id), {
+      description: input.description.trim(),
+      category: input.category,
+      amount: input.amount,
+      dueDay: input.dueDay,
+      notes: input.notes.trim(),
+    })
+    for (const t of transactionsRef.current) {
+      if (t.recurringId !== id || t.status !== 'pending' || !t.period || t.period < fromPeriod) continue
+      const due = recurringDueDate(input.dueDay, t.period)
+      batch.update(doc(db, COLLECTIONS.transactions, t.id), {
+        description: input.description.trim(),
+        category: input.category,
+        amount: input.amount,
+        date: due,
+        dueDate: due,
+      })
+    }
+    await batch.commit()
+  }, [])
 
-  const setRecurringActive = useCallback(
-    async (id: string, active: boolean) => {
-      // On reactivation, resume from this month instead of back-filling the
-      // months it was paused; the unique (recurring_id, period) key keeps this
-      // month's bill from being duplicated if it already exists.
-      const resume = active ? { last_generated_period: periodStartISO(shiftPeriod(currentPeriod(), -1)) } : {}
-      must(await supabase.from('finance_recurring').update({ active, ...resume }).eq('id', id))
-      if (active) await generateRecurring()
-      await loadAll()
-    },
-    [generateRecurring, loadAll],
-  )
+  const setRecurringActive = useCallback(async (id: string, active: boolean) => {
+    // On reactivation, resume from this month instead of back-filling the
+    // months it was paused; a bill that already exists for this month is kept.
+    const resume = active ? { lastGeneratedPeriod: periodStartISO(shiftPeriod(currentPeriod(), -1)) } : {}
+    await updateDoc(doc(db, COLLECTIONS.recurring, id), { active, ...resume })
+    if (active) await generateRecurringBills()
+  }, [])
 
   // Removes the fixed cost and its still-open bills from this month on. Paid
-  // bills stay in the history (the foreign key just drops the link).
-  const deleteRecurring = useCallback(
-    async (id: string) => {
-      must(
-        await supabase
-          .from('finance_transactions')
-          .delete()
-          .eq('recurring_id', id)
-          .eq('status', 'pending')
-          .gte('period', periodStartISO(currentPeriod())),
-      )
-      must(await supabase.from('finance_recurring').delete().eq('id', id))
-      await loadAll()
-    },
-    [loadAll],
-  )
+  // and past bills stay in the history, just unlinked from the deleted cost.
+  const deleteRecurring = useCallback(async (id: string) => {
+    const fromPeriod = periodStartISO(currentPeriod())
+    const bills = await getDocs(query(collection(db, COLLECTIONS.transactions), where('recurringId', '==', id)))
+    const batch = writeBatch(db)
+    for (const d of bills.docs) {
+      const t = fromTransactionDoc(d)
+      if (t.status === 'pending' && t.period && t.period >= fromPeriod) batch.delete(d.ref)
+      else batch.update(d.ref, { recurringId: null })
+    }
+    batch.delete(doc(db, COLLECTIONS.recurring, id))
+    await batch.commit()
+  }, [])
 
   const value = useMemo<FinanceContextValue>(
     () => ({
