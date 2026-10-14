@@ -119,7 +119,37 @@ export function TimeClockPage() {
           {history.length === 0 ? (
             <p className="py-10 text-center text-sm text-slate-400">Nenhum registro de ponto ainda.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Phones: one compact row per entry instead of a table that doesn't fit. */}
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800 md:hidden">
+              {history.map((entry) => {
+                const user = userMap.get(entry.userId)
+                if (!user) return null
+                return (
+                  <li key={entry.id} className="flex items-center gap-3 py-3">
+                    <Avatar user={user} size={34} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{user.name}</p>
+                      <p className="text-xs tabular-nums text-slate-500 dark:text-slate-400">
+                        {formatDate(entry.date).slice(0, 5)} · {formatTime(entry.clockIn)}–
+                        {entry.clockOut ? (
+                          formatTime(entry.clockOut)
+                        ) : (
+                          <span className="text-emerald-600 dark:text-emerald-400">agora</span>
+                        )}
+                      </p>
+                    </div>
+                    <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100">
+                      {entry.clockOut ? formatHours(entryDurationHours(entry)) : '—'}
+                    </span>
+                    <IconButton tone="danger" onClick={() => deleteTimeEntry(entry.id)} aria-label="Excluir registro">
+                      <Trash2 size={14} />
+                    </IconButton>
+                  </li>
+                )
+              })}
+            </ul>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:text-slate-400">
@@ -169,6 +199,7 @@ export function TimeClockPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>

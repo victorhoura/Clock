@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Activity, CalendarClock, LayoutDashboard, ListChecks, Moon, Sun, Users, Wallet } from 'lucide-react'
 import clsx from 'clsx'
 import { useApp } from '../context/AppContext'
+import { useInstallApp } from '../hooks/useInstallApp'
 
 export type Tab = 'dashboard' | 'ponto' | 'atividades' | 'financeiro' | 'usuarios'
 
@@ -51,6 +52,7 @@ interface LayoutProps {
 
 export function Layout({ active, onChange, children }: LayoutProps) {
   const { theme, toggleTheme } = useApp()
+  const installApp = useInstallApp()
   const todayLong = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
   const today = todayLong.charAt(0).toUpperCase() + todayLong.slice(1)
 
@@ -105,6 +107,7 @@ export function Layout({ active, onChange, children }: LayoutProps) {
 
         <div className="mt-6 border-t border-white/[0.06] pt-4">
           <p className="mb-3 px-3 text-[11px] text-slate-500">{today}</p>
+          {installApp.sidebarButton}
           <button
             onClick={toggleTheme}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-slate-100"
@@ -116,25 +119,32 @@ export function Layout({ active, onChange, children }: LayoutProps) {
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex items-center justify-between bg-sidebar px-4 py-3 md:hidden">
+        <header className="sticky top-0 z-40 flex items-center justify-between bg-sidebar px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:hidden">
           <div className="flex items-center gap-2.5">
             <BrandMark size={30} />
             <p className="text-sm font-semibold text-white">Gestão Plantão Digital</p>
           </div>
-          <button
-            onClick={toggleTheme}
-            className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white"
-            aria-label="Alternar tema"
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+          <div className="flex items-center gap-1">
+            {installApp.headerButton}
+            <button
+              onClick={toggleTheme}
+              className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white"
+              aria-label="Alternar tema"
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+          </div>
         </header>
 
         <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
-          <div key={active} className="animate-page mx-auto w-full max-w-7xl">
-            {children}
+          <div className="mx-auto w-full max-w-7xl">
+            {installApp.banner}
+            <div key={active} className="animate-page">
+              {children}
+            </div>
           </div>
         </main>
+        {installApp.modal}
 
         <nav className="sticky bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white/95 px-1 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur dark:border-slate-800 dark:bg-surface-dark/95 md:hidden">
           {NAV_ITEMS.map((item) => {

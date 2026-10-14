@@ -48,23 +48,25 @@ export function KpiCard({
   const good = hasDelta && (deltaGoodWhen === 'up' ? up : !up)
 
   return (
-    <Card className="p-5">
+    <Card className="p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
-        <div className={clsx('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset', toneClasses[tone])}>
+        <p className="text-[10px] font-medium uppercase leading-snug tracking-wider text-slate-500 dark:text-slate-400 sm:text-xs">
+          {label}
+        </p>
+        <div className={clsx('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset sm:h-9 sm:w-9', toneClasses[tone])}>
           <Icon size={17} />
         </div>
       </div>
       <p
         className={clsx(
-          'mt-2 truncate text-2xl font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white',
+          'mt-2 truncate text-lg font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white sm:text-2xl',
           valueClassName,
         )}
         title={value}
       >
         {value}
       </p>
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] sm:text-xs">
         {hasDelta && (
           <span
             className={clsx(
